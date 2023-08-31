@@ -1,0 +1,16 @@
+name: ego_blur
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pytorch=1.12.1
+  - torchvision=0.13.1
+  - moviepy=1.0.3
+  - numpy=1.24.3
+  - pip=23.1.1
+  - ffmpeg=4.4.1
+  - pip:
+      - opencv-python-headless==4.7.0.72
