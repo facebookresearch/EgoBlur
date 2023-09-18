@@ -116,7 +116,7 @@ def create_output_directory(file_path: str) -> None:
     Simple logic to create output directories if they don't exist.
     """
     print(
-        f"Directory {os.path.dirname(args.output_video_path)} does not exist. Attempting to create it..."
+        f"Directory {os.path.dirname(file_path)} does not exist. Attempting to create it..."
     )
     os.makedirs(os.path.dirname(file_path))
     if not os.path.exists(os.path.dirname(file_path)):
