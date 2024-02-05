@@ -103,3 +103,18 @@ The model is licensed under the [Apache 2.0 license](LICENSE).
 ## Contributing
 
 See [contributing](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md).
+
+## Citing EgoBlur
+
+If you use EgoBlur in your research, please use the following BibTeX entry.
+
+```
+@misc{raina2023egoblur,
+      title={EgoBlur: Responsible Innovation in Aria},
+      author={Nikhil Raina and Guruprasad Somasundaram and Kang Zheng and Sagar Miglani and Steve Saarinen and Jeff Meissner and Mark Schwesinger and Luis Pesqueira and Ishita Prasad and Edward Miller and Prince Gupta and Mingfei Yan and Richard Newcombe and Carl Ren and Omkar M Parkhi},
+      year={2023},
+      eprint={2308.13093},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
+```
