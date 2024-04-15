@@ -4,6 +4,21 @@ This repository contains demo of [EgoBlur models](https://www.projectaria.com/to
 
 ## Installation
 
+### docker
+
+```
+# Image Build
+docker build -t EgoBlur:latest .
+
+# Container Run
+  - if you have GPU:
+      docker run -it --gpus all --name egoblur egoblur:latest
+  - else:
+      docker run -it --name egoblur egoblur:latest
+```
+
+### conda
+
 This code requires `conda>=23.1.0` to install dependencies and create a virtual environment to execute the code in. Please follow the instructions [here](https://docs.anaconda.com/free/anaconda/install/index.html) to install Anaconda for your machine.
 
 We list our dependencies in `environment.yaml` file. To install the dependencies and create the env run:
@@ -63,6 +78,7 @@ A brief description of CLI args:
 Download the git repo locally and run following commands.
 Please note that these commands assumes that you have a created a folder `/home/${USER}/ego_blur_assets/` where you have extracted the zipped models and have test image in the form of `test_image.jpg` and a test video in the form of `test_video.mp4`.
 
+#### If you have configured using Docker, skip this part.
 ```
 conda activate ego_blur
 ```
