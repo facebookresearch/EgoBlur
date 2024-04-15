@@ -12,9 +12,9 @@ docker build -t EgoBlur:latest .
 
 # Container Run
   - if you have GPU:
-      docker run -it --gpus all --name egoblur egoblur:latest
+      docker run -it --gpus all --name egoblur -v ./:/workspace/ egoblur:latest
   - else:
-      docker run -it --name egoblur egoblur:latest
+      docker run -it --name egoblur -v ./:/workspace/ egoblur:latest
 ```
 
 ### conda
