@@ -95,7 +95,7 @@ struct EgoBlurImageMutator : public vrs::utils::UserDefinedImageMutator {
       std::cout << "Loaded model: " << path << std::endl;
       model->to(device_);
       model->eval();
-    } catch (const c10::Error& e) {
+    } catch (const c10::Error&) {
       std::cout << "Failed to load model: " << path << std::endl;
       throw;
     }
