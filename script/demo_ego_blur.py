@@ -486,7 +486,6 @@ if __name__ == "__main__":
         lp_detector = None
 
     if args.input_image_path is not None:
-
         image = visualize_image(
             args.input_image_path,
             face_detector,
