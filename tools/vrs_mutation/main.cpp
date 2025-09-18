@@ -22,7 +22,7 @@
 #include <vrs/utils/FilterCopy.h> // @manual
 #include <vrs/utils/RecordFileInfo.h> // @manual
 
-#include <projectaria_tools/tools/samples/vrs_mutation/ImageMutationFilterCopier.h> // @manual
+#include <projectaria_tools/examples/Gen1/cpp_samples/vrs_mutation/ImageMutationFilterCopier.h> // @manual
 #include "EgoBlurImageMutator.h"
 
 #include <CLI/CLI.hpp>
