@@ -353,7 +353,7 @@ def visualize_image(
     """
     parameter input_image_path: absolute path to the input image
     parameter face_detector: face detector model to perform face detections
-    parameter lp_detector: face detector model to perform face detections
+    parameter lp_detector: license plate model to perform license plate detections
     parameter face_model_score_threshold: face model score threshold to filter out low confidence detection
     parameter lp_model_score_threshold: license plate model score threshold to filter out low confidence detection
     parameter nms_iou_threshold: NMS iou threshold
