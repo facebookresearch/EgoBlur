@@ -13,8 +13,8 @@ import cv2
 import numpy as np
 import torch
 import torchvision
-from moviepy.editor import ImageSequenceClip
 from moviepy.video.io.VideoFileClip import VideoFileClip
+from typing import Callable
 
 
 def parse_args():
@@ -421,13 +421,12 @@ def visualize_video(
 
     Perform detections on the input video and save the output video at the given path.
     """
-    visualized_images = []
-    video_reader_clip = VideoFileClip(input_video_path)
-    for frame in video_reader_clip.iter_frames():
-        if len(frame.shape) == 2:
-            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-        image = frame.copy()
-        bgr_image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+    def transform_image(frame_getter: Callable[[int], np.ndarray], t: int) -> np.ndarray:
+        image = frame_getter(t)
+        if len(image.shape) == 2:
+            image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        bgr_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         image_tensor = get_image_tensor(bgr_image)
         image_tensor_copy = image_tensor.clone()
         detections = []
@@ -451,20 +450,17 @@ def visualize_video(
                     nms_iou_threshold,
                 )
             )
-        visualized_images.append(
-            visualize(
-                image,
-                detections,
-                scale_factor_detections,
-            )
-        )
+        return visualize(
+                    image,
+                    detections,
+                    scale_factor_detections,
+                )
 
-    video_reader_clip.close()
 
-    if visualized_images:
-        video_writer_clip = ImageSequenceClip(visualized_images, fps=output_video_fps)
-        video_writer_clip.write_videofile(output_video_path)
-        video_writer_clip.close()
+
+    video_clip = VideoFileClip(input_video_path)
+    video_clip = video_clip.fl(transform_image)
+    video_clip.write_videofile(output_video_path, fps=output_video_fps)
 
 
 if __name__ == "__main__":
