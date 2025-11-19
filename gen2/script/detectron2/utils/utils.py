@@ -18,7 +18,8 @@ from typing import List, Tuple, Union
 import numpy as np
 import torch
 import torch.nn.functional as F
-from detectron2.structures import Instances
+
+from gen2.script.detectron2.structures import Instances
 from PIL import Image
 
 

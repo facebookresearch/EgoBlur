@@ -21,13 +21,9 @@ from typing import List, Optional
 
 import cv2
 import numpy as np
-from detectron2.export.torchscript_patch import patch_instances
-from moviepy.editor import ImageSequenceClip
-from moviepy.video.io.VideoFileClip import VideoFileClip
-from predictor import ClassID, EgoblurDetector, PATCH_INSTANCES_FIELDS
-
-from tqdm.auto import tqdm
-from utils import (
+from gen2.script.detectron2.export.torchscript_patch import patch_instances
+from gen2.script.predictor import ClassID, EgoblurDetector, PATCH_INSTANCES_FIELDS
+from gen2.script.utils import (
     get_device,
     get_image_tensor,
     read_image,
@@ -36,6 +32,10 @@ from utils import (
     validate_inputs,
     write_image,
 )
+from moviepy.editor import ImageSequenceClip
+from moviepy.video.io.VideoFileClip import VideoFileClip
+
+from tqdm.auto import tqdm
 
 
 logger = setup_logger()
@@ -93,7 +93,7 @@ def parse_args():
         required=False,
         type=float,
         default=1,
-        help="Scale detections by the given factor to allow blurring more area, 1.15 would mean 15% scaling",
+        help="Scale detections by the given factor to allow blurring more area, 1.15 would mean 15%% scaling",
     )
 
     parser.add_argument(
@@ -344,7 +344,7 @@ def visualize_video(
         clip.close()
 
 
-if __name__ == "__main__":
+def main() -> int:
     args = validate_inputs(parse_args())
     device = get_device()
 
@@ -398,3 +398,9 @@ if __name__ == "__main__":
             args.scale_factor_detections,
             args.output_video_fps,
         )
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

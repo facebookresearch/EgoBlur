@@ -12,14 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from gen2.script.detectron2.utils.utils import (
-    convert_scripted_instances,
-    detector_postprocess,
-    ResizeShortestEdge,
-)
+"Expose Gen1 demo helpers as a package."
 
-__all__ = [
-    "ResizeShortestEdge",
-    "convert_scripted_instances",
-    "detector_postprocess",
-]
+from .demo_ego_blur_gen1 import main
+
+__all__ = ["main"]

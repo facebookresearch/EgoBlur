@@ -18,7 +18,7 @@
 import argparse
 import os
 from functools import lru_cache
-from typing import List
+from typing import List, Optional
 
 import cv2
 import numpy as np
@@ -75,7 +75,7 @@ def parse_args():
         required=False,
         type=float,
         default=1,
-        help="Scale detections by the given factor to allow blurring more area, 1.15 would mean 15% scaling",
+        help="Scale detections by the given factor to allow blurring more area, 1.15 would mean 15%% scaling",
     )
 
     parser.add_argument(
@@ -478,7 +478,7 @@ def visualize_video(
         video_writer_clip.close()
 
 
-if __name__ == "__main__":
+def main() -> int:
     args = validate_inputs(parse_args())
     if args.face_model_path is not None:
         face_detector = torch.jit.load(args.face_model_path, map_location="cpu").to(
@@ -497,7 +497,7 @@ if __name__ == "__main__":
         lp_detector = None
 
     if args.input_image_path is not None:
-        image = visualize_image(
+        visualize_image(
             args.input_image_path,
             face_detector,
             lp_detector,
@@ -520,3 +520,9 @@ if __name__ == "__main__":
             args.scale_factor_detections,
             args.output_video_fps,
         )
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

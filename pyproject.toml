@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=69.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "egoblur"
+version = "2.0.0a2"
+description = "Demo utilities for running EgoBlur person and license plate blurring models."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+authors = [
+  { name = "Project Aria Team", email = "projectaria@meta.com" }
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Multimedia :: Graphics",
+  "Topic :: Multimedia :: Video",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "moviepy>=1.0.3,<2.0",
+  "numpy>=1.24,<3",
+  "opencv-python-headless>=4.7,<5",
+  "tqdm>=4.64,<5",
+  "torch==2.5.1",
+  "torchvision==0.20.1",
+]
+
+[project.urls]
+Homepage = "https://www.projectaria.com/tools/egoblur"
+Documentation = "https://www.projectaria.com/tools/egoblur"
+Source = "https://github.com/facebookresearch/egoblur"
+
+[project.entry-points."console_scripts"]
+egoblur-gen1 = "gen1.script.demo_ego_blur_gen1:main"
+egoblur-gen2 = "gen2.script.demo_ego_blur_gen2:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = [
+  "gen1/demo_assets*",
+  "gen2/demo_assets*",
+  "gen1/tools*",
+  "gen2/tools*",
+  "build*",
+  "dist*",
+]

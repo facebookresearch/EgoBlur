@@ -1,0 +1,5 @@
+include README.md
+include LICENSE
+recursive-include gen2/script/detectron2 *
+recursive-exclude * __pycache__ *.py[co]
+

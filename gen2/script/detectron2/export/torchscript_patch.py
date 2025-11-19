@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import importlib
 import os
 import sys
 import tempfile
@@ -20,10 +21,17 @@ from copy import deepcopy
 from unittest import mock
 
 # need some explicit imports due to https://github.com/pytorch/pytorch/issues/38964
-import detectron2  # noqa F401
 import torch
-from detectron2.structures import Boxes, Instances
-from detectron2.utils.env import _import_file
+
+from gen2.script.detectron2.structures import Boxes, Instances
+from gen2.script.detectron2.utils.env import _import_file
+
+_PKG_ROOT = __name__.split(".export", 1)[0]
+_ROOT_PACKAGE = _PKG_ROOT.split(".", 1)[0]
+# expose a detectron2-like module alias so type annotations still resolve
+detectron2 = importlib.import_module(_PKG_ROOT)
+_TORCHSCRIPT_PREFIX = "detectron2.export.torchscript_patch"
+sys.modules.setdefault(_TORCHSCRIPT_PREFIX, sys.modules[__name__])
 
 # NOTE: For our integration, `patch_instances` is the only entrypoint we rely on;
 _counter = 0
@@ -114,7 +122,10 @@ def _gen_instance_class(fields):
             assert isinstance(name, str), f"Field name must be str, got {name}"
             self.name = name
             self.type_ = type_
-            self.annotation = f"{type_.__module__}.{type_.__name__}"
+            module_name = f"{type_.__module__}.{type_.__name__}"
+            if type_.__module__.startswith(_PKG_ROOT):
+                module_name = type_.__name__
+            self.annotation = module_name
 
     fields = [_FieldType(k, v) for k, v in fields.items()]
 
@@ -310,7 +321,7 @@ class {cls_name}:
 
 def _gen_instance_module(fields):
     # TODO: find a more automatic way to enable import of other classes
-    s = """
+    s = f"""
 from copy import deepcopy
 import torch
 from torch import Tensor
@@ -318,7 +329,8 @@ import typing
 from typing import *
 
 import detectron2
-from detectron2.structures import Boxes, Instances
+import {_ROOT_PACKAGE}
+from {_PKG_ROOT}.structures import Boxes, Instances
 
 """
 
@@ -328,11 +340,7 @@ from detectron2.structures import Boxes, Instances
 
 
 def _import(path):
-    return _import_file(
-        "{}{}".format(sys.modules[__name__].__name__, _counter),
-        path,
-        make_importable=True,
-    )
+    return _import_file(f"{_TORCHSCRIPT_PREFIX}{_counter}", path, make_importable=True)
 
 
 @contextmanager
@@ -351,14 +359,19 @@ def patch_builtin_len(modules=()):
         return obj.__len__()
 
     with ExitStack() as stack:
-        MODULES = [
-            "detectron2.modeling.roi_heads.fast_rcnn",
-            "detectron2.modeling.roi_heads.mask_head",
-            "detectron2.modeling.roi_heads.keypoint_head",
+        modules_to_patch = [
+            f"{_PKG_ROOT}.modeling.roi_heads.fast_rcnn",
+            f"{_PKG_ROOT}.modeling.roi_heads.mask_head",
+            f"{_PKG_ROOT}.modeling.roi_heads.keypoint_head",
         ] + list(modules)
-        ctxs = [stack.enter_context(mock.patch(mod + ".len")) for mod in MODULES]
-        for m in ctxs:
-            m.side_effect = _new_len
+        ctxs = []
+        for mod in modules_to_patch:
+            try:
+                ctxs.append(stack.enter_context(mock.patch(mod + ".len")))
+            except ModuleNotFoundError:
+                continue
+        for patched_module in ctxs:
+            patched_module.side_effect = _new_len
         yield
 
 

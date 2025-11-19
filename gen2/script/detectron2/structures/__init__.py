@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .boxes import Boxes
-from .instances import Instances
+from gen2.script.detectron2.structures.boxes import Boxes
+from gen2.script.detectron2.structures.instances import Instances
 
 __all__ = ["Boxes", "Instances"]

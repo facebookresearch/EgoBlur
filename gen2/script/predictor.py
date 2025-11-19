@@ -21,8 +21,9 @@ import cv2
 import numpy as np
 import torch
 import torchvision
-from detectron2.structures import Boxes, Instances
-from detectron2.utils import (
+
+from gen2.script.detectron2.structures import Boxes, Instances
+from gen2.script.detectron2.utils import (
     convert_scripted_instances,
     detector_postprocess,
     ResizeShortestEdge,

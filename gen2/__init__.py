@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from gen2.script.detectron2.utils.utils import (
-    convert_scripted_instances,
-    detector_postprocess,
-    ResizeShortestEdge,
-)
+"""
+Gen2 demo package exposing the EgoBlur Gen2 helpers.
 
-__all__ = [
-    "ResizeShortestEdge",
-    "convert_scripted_instances",
-    "detector_postprocess",
-]
+Re-export the primary ``main`` entry point implemented in
+``gen2.script.demo_ego_blur_gen2`` so that it can be used by console
+scripts and other callers.
+"""
+
+from .script.demo_ego_blur_gen2 import main
+
+__all__ = ["main"]
