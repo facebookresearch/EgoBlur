@@ -4,31 +4,28 @@ This repository contains demo of [EgoBlur models](https://www.projectaria.com/to
 
 ## Installation
 
-This code requires `conda>=23.1.0` to install dependencies and create a virtual environment to execute the code in. Please follow the instructions [here](https://docs.anaconda.com/free/anaconda/install/index.html) to install Anaconda for your machine.
-
-We list our dependencies in `environment.yaml` file. To install the dependencies and create the env run:
-```
-conda env create --file=environment.yaml
-
-# After installation, check pytorch.
-conda activate ego_blur
-python
->>> import torch
->>> torch.__version__
-'1.12.1'
->>> torch.cuda.is_available()
-True
-```
-
-Please note that this code can run on both CPU and GPU but installing both PyTorch and TorchVision with CUDA support is strongly recommended.
+### Installation from PyPI
+1. (Optional) Create and activate a fresh virtual environment:
+   ```
+   mkdir -p ~/venvs
+   python3 -m venv ~/venvs/egoblur
+   source ~/venvs/egoblur/bin/activate
+   pip install --upgrade pip
+   ```
+2. Install EgoBlur directly from PyPI:
+   ```
+   pip install egoblur
+   ```
 
 ## Getting Started
 First download the zipped models from given links. Then the models can be used as input/s to CLI.
 
 | Model | Download link |
 | -------- | -------- |
-| ego_blur_face | [ego_blur_website](https://www.projectaria.com/tools/egoblur) |
-| ego_blur_lp | [ego_blur_website](https://www.projectaria.com/tools/egoblur) |
+| ego_blur_face_gen1 | [ego_blur_website](https://www.projectaria.com/tools/egoblur) |
+| ego_blur_lp_gen1 | [ego_blur_website](https://www.projectaria.com/tools/egoblur) |
+| ego_blur_face_gen2 | [ego_blur_website](https://www.projectaria.com/tools/egoblur) |
+| ego_blur_lp_gen2 | [ego_blur_website](https://www.projectaria.com/tools/egoblur) |
 
 
 ### CLI options
@@ -59,42 +56,71 @@ A brief description of CLI args:
 
 
 
-### CLI command example
-Download the git repo locally and run following commands.
-Please note that these commands assumes that you have a created a folder `/home/${USER}/ego_blur_assets/` where you have extracted the zipped models and have test image in the form of `test_image.jpg` and a test video in the form of `test_video.mp4`.
+### CLI command examples
+Download this repository to access the built-in demo assets. The samples are organized per generation:
+
+- Gen2 assets live under `${EGOBLUR_REPO}/gen2/demo_assets/`
+- Gen1 assets live under `${EGOBLUR_REPO}/gen1/demo_assets/`
+
+Update the snippets below with absolute paths that match your system, for example:
 
 ```
-conda activate ego_blur
+export EGOBLUR_REPO=/absolute/path/to/ego_blur_public_internal
+export EGOBLUR_MODELS=/home/${USER}/ego_blur_assets
 ```
 
-#### demo command for face blurring on the demo_assets image
+Extract the downloaded model files into `${EGOBLUR_MODELS}` (for example, `${EGOBLUR_MODELS}/ego_blur_face_gen2.jit`). After installing the package, run:
 
 ```
-python script/demo_ego_blur.py --face_model_path /home/${USER}/ego_blur_assets/ego_blur_face.jit --input_image_path demo_assets/test_image.jpg --output_image_path /home/${USER}/ego_blur_assets/test_image_output.jpg
+egoblur-gen2 --help
 ```
 
-
-#### demo command for face blurring on an image using default arguments
-
+#### Face blurring (image)
 ```
-python script/demo_ego_blur.py --face_model_path /home/${USER}/ego_blur_assets/ego_blur_face.jit --input_image_path /home/${USER}/ego_blur_assets/test_image.jpg --output_image_path /home/${USER}/ego_blur_assets/test_image_output.jpg
-```
-
-
-#### demo command for face blurring on an image
-```
-python script/demo_ego_blur.py --face_model_path /home/${USER}/ego_blur_assets/ego_blur_face.jit --input_image_path /home/${USER}/ego_blur_assets/test_image.jpg --output_image_path /home/${USER}/ego_blur_assets/test_image_output.jpg --face_model_score_threshold 0.9 --nms_iou_threshold 0.3 --scale_factor_detections 1.15
+egoblur-gen2 \
+  --face_model_path ${EGOBLUR_MODELS}/ego_blur_face_gen2.jit \
+  --input_image_path ${EGOBLUR_REPO}/gen2/demo_assets/test_face_image.png \
+  --output_image_path ${EGOBLUR_REPO}/gen2/demo_assets/output/test_face_image_output.png
 ```
 
-#### demo command for license plate blurring on an image
+#### License plate blurring (image)
 ```
-python script/demo_ego_blur.py --lp_model_path /home/${USER}/ego_blur_assets/ego_blur_lp.jit --input_image_path /home/${USER}/ego_blur_assets/test_image.jpg --output_image_path /home/${USER}/ego_blur_assets/test_image_output.jpg --lp_model_score_threshold 0.9 --nms_iou_threshold 0.3 --scale_factor_detections 1
+egoblur-gen2 \
+  --lp_model_path ${EGOBLUR_MODELS}/ego_blur_lp_gen2.jit \
+  --input_image_path ${EGOBLUR_REPO}/gen2/demo_assets/test_lp_image.png \
+  --output_image_path ${EGOBLUR_REPO}/gen2/demo_assets/output/test_lp_image_output.png
 ```
 
-#### demo command for face blurring and license plate blurring on an input image and video
+#### Combined face + license plate (image + video)
 ```
-python script/demo_ego_blur.py --face_model_path /home/${USER}/ego_blur_assets/ego_blur_face.jit --lp_model_path /home/${USER}/ego_blur_assets/ego_blur_lp.jit --input_image_path /home/${USER}/ego_blur_assets/test_image.jpg --output_image_path /home/${USER}/ego_blur_assets/test_image_output.jpg  --input_video_path /home/${USER}/ego_blur_assets/test_video.mp4 --output_video_path /home/${USER}/ego_blur_assets/test_video_output.mp4 --face_model_score_threshold 0.9 --lp_model_score_threshold 0.9 --nms_iou_threshold 0.3 --scale_factor_detections 1 --output_video_fps 20
+egoblur-gen2 \
+  --face_model_path ${EGOBLUR_MODELS}/ego_blur_face_gen2.jit \
+  --lp_model_path ${EGOBLUR_MODELS}/ego_blur_lp_gen2.jit \
+  --input_image_path ${EGOBLUR_REPO}/gen2/demo_assets/test_face_image.png \
+  --output_image_path ${EGOBLUR_REPO}/gen2/demo_assets/output/test_face_image_output.png \
+  --input_video_path ${EGOBLUR_REPO}/gen2/demo_assets/test_face_video.mp4 \
+  --output_video_path ${EGOBLUR_REPO}/gen2/demo_assets/output/test_face_video_output.mp4 \
+  --face_model_score_threshold 0.9 \
+  --lp_model_score_threshold 0.9 \
+  --nms_iou_threshold 0.3 \
+  --scale_factor_detections 1.0 \
+  --output_video_fps 20
 ```
+
+#### Gen1 demo assets
+Gen1 sample media lives in `${EGOBLUR_REPO}/gen1/demo_assets/`. Sample usage:
+
+```
+egoblur-gen1 \
+  --face_model_path ${EGOBLUR_MODELS}/ego_blur_face_gen1.jit \
+  --lp_model_path ${EGOBLUR_MODELS}/ego_blur_lp_gen1.jit \
+  --input_image_path ${EGOBLUR_REPO}/gen1/demo_assets/test_image.jpg \
+  --output_image_path ${EGOBLUR_REPO}/gen1/demo_assets/test_image_output.jpg \
+  --input_video_path ${EGOBLUR_REPO}/gen1/demo_assets/test_video.mp4 \
+  --output_video_path ${EGOBLUR_REPO}/gen1/demo_assets/test_video_output.mp4
+```
+
+The CLI arguments are otherwise identical between `egoblur-gen1` and `egoblur-gen2`.
 
 ## License
 
