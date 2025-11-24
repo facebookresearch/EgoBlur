@@ -4,6 +4,8 @@ This repository contains demo of [EgoBlur models](https://www.projectaria.com/to
 
 ## Installation
 
+### Conda
+
 This code requires `conda>=23.1.0` to install dependencies and create a virtual environment to execute the code in. Please follow the instructions [here](https://docs.anaconda.com/free/anaconda/install/index.html) to install Anaconda for your machine.
 
 We list our dependencies in `environment.yaml` file. To install the dependencies and create the env run:
@@ -21,6 +23,20 @@ True
 ```
 
 Please note that this code can run on both CPU and GPU but installing both PyTorch and TorchVision with CUDA support is strongly recommended.
+
+### Docker
+#### Before proceeding with this task, you need to clone this repository and download the model into the folder.
+
+```
+# Image Build
+docker build -t EgoBlur:latest .
+
+# Container Run
+  - if you have GPU:
+      docker run -it --gpus all --name egoblur -v ./:/workspace/ egoblur:latest
+  - else:
+      docker run -it --name egoblur -v ./:/workspace/ egoblur:latest
+```
 
 ## Getting Started
 First download the zipped models from given links. Then the models can be used as input/s to CLI.
@@ -59,7 +75,7 @@ A brief description of CLI args:
 
 
 
-### CLI command example
+### Conda CLI command example
 Download the git repo locally and run following commands.
 Please note that these commands assumes that you have a created a folder `/home/${USER}/ego_blur_assets/` where you have extracted the zipped models and have test image in the form of `test_image.jpg` and a test video in the form of `test_video.mp4`.
 
@@ -95,6 +111,20 @@ python script/demo_ego_blur.py --lp_model_path /home/${USER}/ego_blur_assets/ego
 ```
 python script/demo_ego_blur.py --face_model_path /home/${USER}/ego_blur_assets/ego_blur_face.jit --lp_model_path /home/${USER}/ego_blur_assets/ego_blur_lp.jit --input_image_path /home/${USER}/ego_blur_assets/test_image.jpg --output_image_path /home/${USER}/ego_blur_assets/test_image_output.jpg  --input_video_path /home/${USER}/ego_blur_assets/test_video.mp4 --output_video_path /home/${USER}/ego_blur_assets/test_video_output.mp4 --face_model_score_threshold 0.9 --lp_model_score_threshold 0.9 --nms_iou_threshold 0.3 --scale_factor_detections 1 --output_video_fps 20
 ```
+
+### docker CLI command example
+
+#### demo command for face blurring on the demo_assets image
+
+```
+# image
+python3 script/demo_ego_blur.py --face_model_path ./ego_blur_face.jit --input_image_path demo_assets/test_image.jpg --output_image_path ./test_image_output.jpg
+```
+```
+# video
+python3 script/demo_ego_blur.py --face_model_path ./ego_blur_face.jit --input_video_path demo_assets/test_video.mp4 --output_video_path ./test_video_output.mp4
+```
+
 
 ## License
 
