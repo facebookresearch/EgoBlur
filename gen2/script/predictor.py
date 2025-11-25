@@ -22,6 +22,10 @@ import numpy as np
 import torch
 import torchvision
 
+from gen2.script.constants import (
+    MAX_MODEL_SCORE_THRESHOLD_GEN2,
+    MIN_MODEL_SCORE_THRESHOLD_GEN2,
+)
 from gen2.script.detectron2.structures import Boxes, Instances
 from gen2.script.detectron2.utils import (
     convert_scripted_instances,
@@ -49,9 +53,6 @@ PATCH_INSTANCES_FIELDS = {
     "pred_classes": torch.Tensor,
     "pred_masks": torch.Tensor,
 }
-
-MIN_MODEL_SCORE_THRESHOLD = 0.0
-MAX_MODEL_SCORE_THRESHOLD = 1.0
 
 
 @dataclass
@@ -171,19 +172,19 @@ class EgoblurDetector:
             model_score_threshold: Desired score threshold.
 
         Returns:
-            Threshold if it lies within ``[MIN_MODEL_SCORE_THRESHOLD, MAX_MODEL_SCORE_THRESHOLD]``.
+            Threshold if it lies within ``[MIN_MODEL_SCORE_THRESHOLD_GEN2, MAX_MODEL_SCORE_THRESHOLD_GEN2]``.
 
         Raises:
             ValueError: When the value is ``None`` or out of range.
         """
         if not (
-            MIN_MODEL_SCORE_THRESHOLD
+            MIN_MODEL_SCORE_THRESHOLD_GEN2
             <= model_score_threshold
-            <= MAX_MODEL_SCORE_THRESHOLD
+            <= MAX_MODEL_SCORE_THRESHOLD_GEN2
         ):
             raise ValueError(
                 "required parameter score_threshold for EgoblurDetector is outside a valid range "
-                f"of {MIN_MODEL_SCORE_THRESHOLD} to {MAX_MODEL_SCORE_THRESHOLD}, provided value {model_score_threshold}"
+                f"of {MIN_MODEL_SCORE_THRESHOLD_GEN2} to {MAX_MODEL_SCORE_THRESHOLD_GEN2}, provided value {model_score_threshold}"
             )
         return model_score_threshold
 

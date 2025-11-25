@@ -17,10 +17,16 @@
 
 import argparse
 import math
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import cv2
 import numpy as np
+from gen2.script.constants import (
+    FACE_THRESHOLDS_GEN2,
+    LP_THRESHOLDS_GEN2,
+    RESIZE_MAX_GEN2,
+    RESIZE_MIN_GEN2,
+)
 from gen2.script.detectron2.export.torchscript_patch import patch_instances
 from gen2.script.predictor import ClassID, EgoblurDetector, PATCH_INSTANCES_FIELDS
 from gen2.script.utils import (
@@ -40,14 +46,26 @@ from tqdm.auto import tqdm
 
 logger = setup_logger()
 
-# Default resize configuration fed into `EgoblurDetector` so demo scripts continue
-# to resize frames to 1200 on the short edge while capping the long edge at 1200.
-RESIZE_MIN = 1200
-RESIZE_MAX = 1200
-
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--camera_name",
+        required=False,
+        type=str,
+        default=None,
+        choices=[
+            "slam-front-left",
+            "slam-front-right",
+            "slam-side-left",
+            "slam-side-right",
+            "camera-rgb",
+        ],
+        help=(
+            "Optional camera identifier used to pick camera-specific default thresholds "
+            "(see README for mapping details)."
+        ),
+    )
     parser.add_argument(
         "--face_model_path",
         required=False,
@@ -60,7 +78,7 @@ def parse_args():
         "--face_model_score_threshold",
         required=False,
         type=float,
-        default=0.05,
+        default=None,
         help="Face model score threshold to filter out low confidence detections",
     )
 
@@ -76,7 +94,7 @@ def parse_args():
         "--lp_model_score_threshold",
         required=False,
         type=float,
-        default=0.05,
+        default=None,
         help="License plate model score threshold to filter out low confidence detections",
     )
 
@@ -137,6 +155,26 @@ def parse_args():
     )
 
     return parser.parse_args()
+
+
+def _get_threshold(
+    camera_name: Optional[str],
+    user_threshold: Optional[float],
+    threshold_map: Optional[Dict[str, float]],
+) -> float:
+    """
+    Resolve the effective score threshold using user input or camera defaults.
+    """
+    if user_threshold is not None:
+        return user_threshold
+    if threshold_map is not None:
+        if camera_name is not None:
+            return threshold_map.get(camera_name, threshold_map["camera-rgb"])
+        else:
+            return threshold_map["camera-rgb"]
+    raise ValueError(
+        "Cannot retrieve the model score threshold. Please provide a user-specified threshold or a mapping from camera name to threshold."
+    )
 
 
 def visualize(
@@ -348,17 +386,24 @@ def main() -> int:
     args = validate_inputs(parse_args())
     device = get_device()
 
+    face_threshold = _get_threshold(
+        args.camera_name, args.face_model_score_threshold, FACE_THRESHOLDS_GEN2
+    )
+    lp_threshold = _get_threshold(
+        args.camera_name, args.lp_model_score_threshold, LP_THRESHOLDS_GEN2
+    )
+
     face_detector: Optional[EgoblurDetector]
     if args.face_model_path is not None:
         face_detector = EgoblurDetector(
             model_path=args.face_model_path,
             device=device,
             detection_class=ClassID.FACE,
-            score_threshold=args.face_model_score_threshold,
+            score_threshold=face_threshold,
             nms_iou_threshold=args.nms_iou_threshold,
             resize_aug={
-                "min_size_test": RESIZE_MIN,
-                "max_size_test": RESIZE_MAX,
+                "min_size_test": RESIZE_MIN_GEN2,
+                "max_size_test": RESIZE_MAX_GEN2,
             },
         )
     else:
@@ -370,11 +415,11 @@ def main() -> int:
             model_path=args.lp_model_path,
             device=device,
             detection_class=ClassID.LICENSE_PLATE,
-            score_threshold=args.lp_model_score_threshold,
+            score_threshold=lp_threshold,
             nms_iou_threshold=args.nms_iou_threshold,
             resize_aug={
-                "min_size_test": RESIZE_MIN,
-                "max_size_test": RESIZE_MAX,
+                "min_size_test": RESIZE_MIN_GEN2,
+                "max_size_test": RESIZE_MAX_GEN2,
             },
         )
     else:

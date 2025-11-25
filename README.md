@@ -32,13 +32,15 @@ First download the zipped models from given links. Then the models can be used a
 
 A brief description of CLI args:
 
+`--camera_name` **(Gen2 only)** use this argument to specify the camera type for automatic threshold selection. Valid options are: `slam-front-left`, `slam-front-right`, `slam-side-left`, `slam-side-right`, `camera-rgb`. See the stream id to camera label in [project aria wiki](https://facebookresearch.github.io/projectaria_tools/gen2/technical-specs/vrs/streamid-label-mapper). When specified, camera-specific default thresholds will be used for both face and license plate detection (see Camera-Specific Thresholds section below). This is optional.
+
 `--face_model_path` use this argument to provide absolute EgoBlur face model file path. You MUST provide either `--face_model_path` or `--lp_model_path` or both. If none is provided code will throw a `ValueError`.
 
-`--face_model_score_threshold` use this argument to provide face model score threshold to filter out low confidence face detections. The values must be between 0.0 and 1.0, if not provided this defaults to 0.1.
+`--face_model_score_threshold` use this argument to provide face model score threshold to filter out low confidence face detections. The values must be between 0.0 and 1.0. If not provided and `--camera_name` is specified (Gen2 only), camera-specific defaults are used. Otherwise set to default threshold for camera rgb.
 
 `--lp_model_path` use this argument to provide absolute EgoBlur license plate file path. You MUST provide either `--face_model_path` or `--lp_model_path` or both. If none is provided code will throw a `ValueError`.
 
-`--lp_model_score_threshold` use this argument to provide license plate model score threshold to filter out low confidence license plate detections. The values must be between 0.0 and 1.0, if not provided this defaults to 0.1.
+`--lp_model_score_threshold` use this argument to provide license plate model score threshold to filter out low confidence license plate detections. The values must be between 0.0 and 1.0. If not provided and `--camera_name` is specified (Gen2 only), camera-specific defaults are used. Otherwise set to default threshold for camera rgb.
 
 `--nms_iou_threshold` use this argument to provide NMS iou threshold to filter out low confidence overlapping boxes. The values must be between 0.0 and 1.0, if not provided this defaults to 0.3.
 
@@ -106,6 +108,29 @@ egoblur-gen2 \
   --scale_factor_detections 1.0 \
   --output_video_fps 20
 ```
+
+#### Using camera-specific thresholds
+```
+egoblur-gen2 \
+  --camera_name slam-front-left \
+  --face_model_path ${EGOBLUR_MODELS}/ego_blur_face_gen2.jit \
+  --lp_model_path ${EGOBLUR_MODELS}/ego_blur_lp_gen2.jit \
+  --input_image_path ${EGOBLUR_REPO}/gen2/demo_assets/test_face_image.png \
+  --output_image_path ${EGOBLUR_REPO}/gen2/demo_assets/output/test_face_image_output.png
+```
+This will automatically use camera-specific thresholds optimized for the slam-front-left camera.
+
+To override camera defaults with custom thresholds:
+```
+egoblur-gen2 \
+  --camera_name camera-rgb \
+  --face_model_path ${EGOBLUR_MODELS}/ego_blur_face_gen2.jit \
+  --lp_model_path ${EGOBLUR_MODELS}/ego_blur_lp_gen2.jit \
+  --input_image_path ${EGOBLUR_REPO}/gen2/demo_assets/test_face_image.png \
+  --output_image_path ${EGOBLUR_REPO}/gen2/demo_assets/output/test_face_image_output.png \
+  --face_model_score_threshold 0.8
+```
+This will use a custom face threshold of 0.8 while keeping the camera-rgb default for license plate detection.
 
 #### Gen1 demo assets
 Gen1 sample media lives in `${EGOBLUR_REPO}/gen1/demo_assets/`. Sample usage:

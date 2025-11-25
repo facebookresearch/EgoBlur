@@ -61,11 +61,15 @@ def validate_inputs(args: argparse.Namespace) -> argparse.Namespace:
     Run some basic checks on the input arguments
     """
     # input args value checks
-    if not 0.0 <= args.face_model_score_threshold <= 1.0:
+    if args.face_model_score_threshold is not None and not (
+        0.0 <= args.face_model_score_threshold <= 1.0
+    ):
         raise ValueError(
             f"Invalid face_model_score_threshold {args.face_model_score_threshold}"
         )
-    if not 0.0 <= args.lp_model_score_threshold <= 1.0:
+    if args.lp_model_score_threshold is not None and not (
+        0.0 <= args.lp_model_score_threshold <= 1.0
+    ):
         raise ValueError(
             f"Invalid lp_model_score_threshold {args.lp_model_score_threshold}"
         )
