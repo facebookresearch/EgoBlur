@@ -7,14 +7,13 @@ name = "egoblur"
 version = "2.0.0a2"
 description = "Demo utilities for running EgoBlur person and license plate blurring models."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10,<3.13"
 license = "Apache-2.0"
 authors = [
   { name = "Project Aria Team", email = "projectaria@meta.com" }
 ]
 classifiers = [
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -27,8 +26,8 @@ dependencies = [
   "numpy>=1.24,<3",
   "opencv-python-headless>=4.7,<5",
   "tqdm>=4.64,<5",
-  "torch==2.5.1",
-  "torchvision==0.20.1",
+  "torch==2.9.1",
+  "torchvision==0.24.1",
 ]
 
 [project.urls]

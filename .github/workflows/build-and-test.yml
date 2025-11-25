@@ -1,0 +1,226 @@
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  TORCH_VERSION: "2.9.1"
+  TORCHVISION_VERSION: "0.24.1"
+  CUDA_VERSION: "13.0"
+  PIP_NO_PYTHON_VERSION_WARNING: "1"
+
+jobs:
+  linux:
+    name: Linux (${{ matrix.distro.name }} / py${{ matrix.python-version }})
+    runs-on: ubuntu-22.04
+    container:
+      image: ${{ matrix.distro.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+        distro:
+          - name: ubuntu-20.04
+            image: ubuntu:20.04
+            package_manager: apt
+          - name: ubuntu-22.04
+            image: ubuntu:22.04
+            package_manager: apt
+          - name: ubuntu-24.04
+            image: ubuntu:24.04
+            package_manager: apt
+          - name: fedora-43
+            image: fedora:43
+            package_manager: dnf
+    env:
+      PYTORCH_INDEX_URL: https://download.pytorch.org/whl/cu130
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          if [ "${{ matrix.distro.package_manager }}" = "apt" ]; then
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get install -y \
+              git curl ca-certificates build-essential ffmpeg libsm6 libxext6 xz-utils \
+              bzip2 libbz2-dev
+            rm -rf /var/lib/apt/lists/*
+          else
+            dnf install -y \
+              git curl ca-certificates gcc gcc-c++ make ffmpeg mesa-libGL libSM libXext xz \
+              bzip2 bzip2-libs
+          fi
+
+      - name: Install Python ${{ matrix.python-version }}
+        shell: bash
+        env:
+          DISTRO_NAME: ${{ matrix.distro.name }}
+          DISTRO_PACKAGE_MANAGER: ${{ matrix.distro.package_manager }}
+        run: |
+          set -eux
+          PY_VER="${{ matrix.python-version }}"
+          if [ "${DISTRO_PACKAGE_MANAGER}" = "apt" ]; then
+            if [ "${DISTRO_NAME}" = "ubuntu-20.04" ]; then
+              SRC_VERSION="${PY_VER}.0"
+              BUILD_PREFIX="/opt/python/${SRC_VERSION}"
+              apt-get update
+              DEBIAN_FRONTEND=noninteractive apt-get install -y \
+                build-essential \
+                libssl-dev \
+                zlib1g-dev \
+                libncurses5-dev \
+                libncursesw5-dev \
+                libreadline-dev \
+                libsqlite3-dev \
+                libgdbm-dev \
+                libdb5.3-dev \
+                libbz2-dev \
+                libexpat1-dev \
+                liblzma-dev \
+                tk-dev \
+                libffi-dev \
+                uuid-dev \
+                wget \
+                curl
+              cd /tmp
+              wget -q "https://www.python.org/ftp/python/${SRC_VERSION}/Python-${SRC_VERSION}.tgz"
+              tar -xf "Python-${SRC_VERSION}.tgz"
+              cd "Python-${SRC_VERSION}"
+              ./configure \
+                --prefix="${BUILD_PREFIX}" \
+                --enable-optimizations \
+                --with-ensurepip=install
+              make -j"$(nproc)"
+              make altinstall
+              ln -sf "${BUILD_PREFIX}/bin/python${PY_VER}" "/usr/local/bin/python${PY_VER}"
+              ln -sf "${BUILD_PREFIX}/bin/pip${PY_VER}" "/usr/local/bin/pip${PY_VER}" || true
+              "/usr/local/bin/python${PY_VER}" --version
+            else
+              export DEBIAN_FRONTEND=noninteractive
+              export TZ=Etc/UTC
+              apt-get update
+              apt-get install -y tzdata
+              ln -fs /usr/share/zoneinfo/${TZ} /etc/localtime
+              dpkg-reconfigure -f noninteractive tzdata
+              apt-get install -y software-properties-common python3-pip
+              add-apt-repository universe -y
+              add-apt-repository ppa:deadsnakes/ppa -y
+              apt-get update
+
+              # Verify python package is available
+              echo "Searching for python${PY_VER} package..."
+              # Truncate results; ignore SIGPIPE from apt-cache when head exits early
+              apt-cache search "python${PY_VER}" | head -20 || true
+
+              if ! apt-cache show "python${PY_VER}" >/dev/null 2>&1; then
+                echo "ERROR: Package python${PY_VER} not found in repositories"
+                exit 1
+              fi
+
+              apt-get install -y "python${PY_VER}"
+
+              # Verify installation
+              if ! command -v "python${PY_VER}" >/dev/null 2>&1; then
+                echo "ERROR: python${PY_VER} binary not found after installation"
+                exit 1
+              fi
+
+              echo "python${PY_VER} installed successfully at: $(command -v python${PY_VER})"
+              "python${PY_VER}" --version
+
+              if ! apt-get install -y "python${PY_VER}-venv"; then
+                echo "python${PY_VER}-venv not available, will fall back to virtualenv"
+              fi
+              if apt-cache show "python${PY_VER}-distutils" >/dev/null 2>&1; then
+                apt-get install -y "python${PY_VER}-distutils"
+              fi
+            fi
+          else
+            dnf install -y \
+              "python${PY_VER}" \
+              "python${PY_VER}-devel"
+          fi
+
+      - name: Create virtual environment
+        run: |
+          PY_BIN="python${{ matrix.python-version }}"
+          PY_BIN_PATH="$(command -v ${PY_BIN} || true)"
+          if [ -z "${PY_BIN_PATH}" ]; then
+            echo "Unable to locate ${PY_BIN}; ensure it is installed."
+            exit 1
+          fi
+          if ! "${PY_BIN_PATH}" -m venv .venv; then
+            echo "Falling back to virtualenv for ${PY_BIN_PATH}"
+            python3 -m pip install --upgrade pip
+            python3 -m pip install --upgrade virtualenv
+            python3 -m virtualenv --python "${PY_BIN_PATH}" .venv
+          fi
+          . .venv/bin/activate
+          python -m pip install --upgrade pip
+
+      - name: Install EgoBlur from source
+        env:
+          PIP_EXTRA_INDEX_URL: ${{ env.PYTORCH_INDEX_URL }}
+        run: |
+          . .venv/bin/activate
+          pip install --no-cache-dir .
+
+      - name: Smoke test CLI entry points
+        run: |
+          . .venv/bin/activate
+          egoblur-gen2 -h
+          egoblur-gen1 -h
+
+  macos:
+    name: macOS (${{ matrix.runner }} / py${{ matrix.python-version }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ "macos-14", "macos-15"]
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Ensure system dependencies
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+          HOMEBREW_NO_ANALYTICS: "1"
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            brew install ffmpeg
+          else
+            ffmpeg -version
+          fi
+
+      - name: Create virtual environment
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          python -m pip install --upgrade pip
+
+      - name: Install EgoBlur from source
+        run: |
+          . .venv/bin/activate
+          pip install --no-cache-dir .
+
+      - name: Smoke test CLI entry points
+        run: |
+          . .venv/bin/activate
+          egoblur-gen2 -h
+          egoblur-gen1 -h
