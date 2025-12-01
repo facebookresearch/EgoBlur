@@ -18,7 +18,7 @@ This repository contains demo of [EgoBlur models](https://www.projectaria.com/to
    ```
 
 ## Getting Started
-First download the zipped models from given links. Then the models can be used as input/s to CLI.
+First download the zipped models from the links provided. You can then pass these models as inputs to the CLI. Gen1 models are trained on non‑egocentric data, whereas Gen2 models are trained on both egocentric and non‑egocentric data. Therefore, Gen2 models are optimized for content captured by Aria devices. For a detailed comparison between Gen1 and Gen2, see the [EgoBlur wiki](https://facebookresearch.github.io/projectaria_tools/docs/open_models/egoblur).
 
 | Model | Download link |
 | -------- | -------- |
