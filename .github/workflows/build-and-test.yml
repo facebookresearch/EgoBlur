@@ -19,9 +19,8 @@ env:
 jobs:
   linux:
     name: Linux (${{ matrix.distro.name }} / py${{ matrix.python-version }})
-    runs-on: ubuntu-22.04
-    container:
-      image: ${{ matrix.distro.image }}
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
     strategy:
       fail-fast: false
       matrix:
@@ -39,6 +38,112 @@ jobs:
           - name: fedora-43
             image: fedora:43
             package_manager: dnf
+        include:
+          - python-version: "3.10"
+            distro:
+              name: ubuntu-20.04
+              image: ubuntu:20.04
+              package_manager: apt
+            runner: ubuntu-22.04
+            container: { image: ubuntu:20.04 }
+          - python-version: "3.11"
+            distro:
+              name: ubuntu-20.04
+              image: ubuntu:20.04
+              package_manager: apt
+            runner: ubuntu-22.04
+            container: { image: ubuntu:20.04 }
+          - python-version: "3.12"
+            distro:
+              name: ubuntu-20.04
+              image: ubuntu:20.04
+              package_manager: apt
+            runner: ubuntu-22.04
+            container: { image: ubuntu:20.04 }
+          - python-version: "3.10"
+            distro:
+              name: ubuntu-22.04
+              image: ubuntu:22.04
+              package_manager: apt
+            runner: ubuntu-22.04
+            container: { image: ubuntu:22.04 }
+          - python-version: "3.11"
+            distro:
+              name: ubuntu-22.04
+              image: ubuntu:22.04
+              package_manager: apt
+            runner: ubuntu-22.04
+            container: { image: ubuntu:22.04 }
+          - python-version: "3.12"
+            distro:
+              name: ubuntu-22.04
+              image: ubuntu:22.04
+              package_manager: apt
+            runner: ubuntu-22.04
+            container: { image: ubuntu:22.04 }
+          - python-version: "3.10"
+            distro:
+              name: ubuntu-24.04
+              image: ubuntu:24.04
+              package_manager: apt
+            runner: ubuntu-22.04
+            container: { image: ubuntu:24.04 }
+          - python-version: "3.11"
+            distro:
+              name: ubuntu-24.04
+              image: ubuntu:24.04
+              package_manager: apt
+            runner: ubuntu-22.04
+            container: { image: ubuntu:24.04 }
+          - python-version: "3.12"
+            distro:
+              name: ubuntu-24.04
+              image: ubuntu:24.04
+              package_manager: apt
+            runner: ubuntu-22.04
+            container: { image: ubuntu:24.04 }
+          - python-version: "3.10"
+            distro:
+              name: fedora-43
+              image: fedora:43
+              package_manager: dnf
+            runner: ubuntu-22.04
+            container: { image: fedora:43 }
+          - python-version: "3.11"
+            distro:
+              name: fedora-43
+              image: fedora:43
+              package_manager: dnf
+            runner: ubuntu-22.04
+            container: { image: fedora:43 }
+          - python-version: "3.12"
+            distro:
+              name: fedora-43
+              image: fedora:43
+              package_manager: dnf
+            runner: ubuntu-22.04
+            container: { image: fedora:43 }
+          - python-version: "3.10"
+            distro:
+              name: ubuntu-22.04
+              image: ubuntu:22.04
+              package_manager: apt
+            runner: 4-core-ubuntu-gpu-t4
+            container: null
+          - python-version: "3.11"
+            distro:
+              name: ubuntu-22.04
+              image: ubuntu:22.04
+              package_manager: apt
+            runner: 4-core-ubuntu-gpu-t4
+            container: null
+          - python-version: "3.12"
+            distro:
+              name: ubuntu-22.04
+              image: ubuntu:22.04
+              package_manager: apt
+            runner: 4-core-ubuntu-gpu-t4
+            container: null
     env:
       PYTORCH_INDEX_URL: https://download.pytorch.org/whl/cu130
     steps:
@@ -51,12 +156,12 @@ jobs:
             apt-get update
             DEBIAN_FRONTEND=noninteractive apt-get install -y \
               git curl wget ca-certificates build-essential ffmpeg libsm6 libxext6 xz-utils \
-              bzip2 libbz2-dev unzip
+              bzip2 libbz2-dev zip unzip
             rm -rf /var/lib/apt/lists/*
           else
             dnf install -y \
               git curl wget ca-certificates gcc gcc-c++ make ffmpeg mesa-libGL libSM libXext xz \
-              bzip2 bzip2-libs unzip
+              bzip2 bzip2-libs zip unzip
           fi
 
       - name: Install Python ${{ matrix.python-version }}
@@ -225,15 +330,6 @@ jobs:
             --output_image_path "${OUTPUT_DIR}/test_lp_image_ci.png" \
             --scale_factor_detections 1.0
 
-      - name: Upload Gen2 inference artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: gen2-inference-${{ matrix.distro.name }}-py${{ matrix.python-version }}
-          if-no-files-found: error
-          path: |
-            gen2/demo_assets/output/test_face_image_ci.png
-            gen2/demo_assets/output/test_lp_image_ci.png
-
       - name: Download EgoBlur Gen1 models
         shell: bash
         env:
@@ -275,13 +371,26 @@ jobs:
             --output_image_path "${OUTPUT_DIR}/test_face_image_ci_gen1.png" \
             --scale_factor_detections 1.0
 
-      - name: Upload Gen1 inference artifacts
+      - name: Package inference artifacts
+        shell: bash
+        env:
+          ZIP_NAME: inference-${{ matrix.distro.name }}-py${{ matrix.python-version }}.zip
+        run: |
+          set -euxo pipefail
+          ZIP_PATH="${{ github.workspace }}/${ZIP_NAME}"
+          rm -f "${ZIP_PATH}"
+          zip -j "${ZIP_PATH}" \
+            "${PWD}/gen2/demo_assets/output/test_face_image_ci.png" \
+            "${PWD}/gen2/demo_assets/output/test_lp_image_ci.png" \
+            "${PWD}/gen1/demo_assets/output/test_face_image_ci_gen1.png"
+          echo "INFERENCE_ZIP=${ZIP_PATH}" >> "${GITHUB_ENV}"
+
+      - name: Upload inference artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: gen1-inference-${{ matrix.distro.name }}-py${{ matrix.python-version }}
+          name: inference-${{ matrix.distro.name }}-py${{ matrix.python-version }}
           if-no-files-found: error
-          path: |
-            gen1/demo_assets/output/test_face_image_ci_gen1.png
+          path: ${{ env.INFERENCE_ZIP }}
 
   macos:
     name: macOS (${{ matrix.runner }} / py${{ matrix.python-version }})
@@ -375,15 +484,6 @@ jobs:
             --output_image_path "${OUTPUT_DIR}/test_lp_image_ci.png" \
             --scale_factor_detections 1.0
 
-      - name: Upload Gen2 inference artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: gen2-inference-${{ matrix.runner }}-py${{ matrix.python-version }}
-          if-no-files-found: error
-          path: |
-            gen2/demo_assets/output/test_face_image_ci.png
-            gen2/demo_assets/output/test_lp_image_ci.png
-
       - name: Download EgoBlur Gen1 models
         shell: bash
         env:
@@ -426,10 +526,62 @@ jobs:
             --output_image_path "${OUTPUT_DIR}/test_face_image_ci_gen1.png" \
             --scale_factor_detections 1.0
 
-      - name: Upload Gen1 inference artifacts
+      - name: Package inference artifacts
+        shell: bash
+        env:
+          ZIP_NAME: inference-${{ matrix.runner }}-py${{ matrix.python-version }}.zip
+        run: |
+          set -euxo pipefail
+          ZIP_PATH="${{ github.workspace }}/${ZIP_NAME}"
+          rm -f "${ZIP_PATH}"
+          zip -j "${ZIP_PATH}" \
+            "${PWD}/gen2/demo_assets/output/test_face_image_ci.png" \
+            "${PWD}/gen2/demo_assets/output/test_lp_image_ci.png" \
+            "${PWD}/gen1/demo_assets/output/test_face_image_ci_gen1.png"
+          echo "INFERENCE_ZIP=${ZIP_PATH}" >> "${GITHUB_ENV}"
+
+      - name: Upload inference artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: gen1-inference-${{ matrix.runner }}-py${{ matrix.python-version }}
+          name: inference-${{ matrix.runner }}-py${{ matrix.python-version }}
           if-no-files-found: error
-          path: |
-            gen1/demo_assets/output/test_face_image_ci_gen1.png
+          path: ${{ env.INFERENCE_ZIP }}
+
+  enterprise-gpu:
+    name: Enterprise GPU (4-core-ubuntu-gpu-t4)
+    runs-on: 4-core-ubuntu-gpu-t4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Print OS information
+        shell: bash
+        run: |
+          set -euxo pipefail
+          if command -v lsb_release >/dev/null 2>&1; then
+            echo "---- lsb_release ----"
+            lsb_release -a || true
+          fi
+          echo "---- /etc/os-release ----"
+          if [ -f /etc/os-release ]; then
+            cat /etc/os-release
+          else
+            echo "/etc/os-release not found"
+          fi
+
+      - name: Print CUDA information
+        shell: bash
+        run: |
+          set -euxo pipefail
+          if command -v nvidia-smi >/dev/null 2>&1; then
+            echo "---- nvidia-smi ----"
+            nvidia-smi
+          else
+            echo "nvidia-smi not available on this runner"
+          fi
+          if command -v nvcc >/dev/null 2>&1; then
+            echo "---- nvcc --version ----"
+            nvcc --version
+          else
+            echo "nvcc not available on this runner"
+          fi
