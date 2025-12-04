@@ -1,0 +1,47 @@
+name: Enterprise GPU Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  info:
+    name: OS and CUDA Info (enterprise GPU)
+    runs-on: 4-core-ubuntu-gpu-t4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Print OS information
+        shell: bash
+        run: |
+          set -euxo pipefail
+          if command -v lsb_release >/dev/null 2>&1; then
+            echo "---- lsb_release ----"
+            lsb_release -a || true
+          else
+            echo "lsb_release not available"
+          fi
+          echo "---- /etc/os-release ----"
+          if [ -f /etc/os-release ]; then
+            cat /etc/os-release
+          else
+            echo "/etc/os-release not found"
+          fi
+
+      - name: Print CUDA information
+        shell: bash
+        run: |
+          set -euxo pipefail
+          if command -v nvidia-smi >/dev/null 2>&1; then
+            echo "---- nvidia-smi ----"
+            nvidia-smi
+          else
+            echo "nvidia-smi not available"
+          fi
+          if command -v nvcc >/dev/null 2>&1; then
+            echo "---- nvcc --version ----"
+            nvcc --version
+          else
+            echo "nvcc not available"
+          fi
+
