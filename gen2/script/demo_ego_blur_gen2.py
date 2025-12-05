@@ -252,7 +252,7 @@ def visualize_image(
         if lp_detector is not None:
             lp_results = lp_detector.run(image_tensor)
             if lp_results:
-                if len(lp_results) > 1:
+                if len(lp_results) != 1:
                     raise ValueError(
                         f"EgoblurDetector.run is expected to return results for a single "
                         f"image in this script, got {len(lp_results)}."
@@ -329,20 +329,22 @@ def visualize_video(
 
                     if face_detector is not None:
                         face_results = face_detector.run(image_tensor)
-                        if len(face_results) != 1:
-                            raise ValueError(
-                                "EgoblurDetector.run is expected to return results "
-                                f"for a single image in this script, got {len(face_results)}."
-                            )
-                        detections.extend(face_results[0])
+                        if face_results:
+                            if len(face_results) != 1:
+                                raise ValueError(
+                                    "EgoblurDetector.run is expected to return results "
+                                    f"for a single image in this script, got {len(face_results)}."
+                                )
+                            detections.extend(face_results[0])
                     if lp_detector is not None:
                         lp_results = lp_detector.run(image_tensor)
-                        if len(lp_results) != 1:
-                            raise ValueError(
-                                "EgoblurDetector.run is expected to return results "
-                                f"for a single image in this script, got {len(lp_results)}."
-                            )
-                        detections.extend(lp_results[0])
+                        if lp_results:
+                            if len(lp_results) != 1:
+                                raise ValueError(
+                                    "EgoblurDetector.run is expected to return results "
+                                    f"for a single image in this script, got {len(lp_results)}."
+                                )
+                            detections.extend(lp_results[0])
 
                     visualized_bgr = visualize(
                         bgr_image.copy(),
