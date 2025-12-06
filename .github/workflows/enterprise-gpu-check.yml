@@ -44,3 +44,4 @@ jobs:
           else
             echo "nvcc not available"
           fi
+
