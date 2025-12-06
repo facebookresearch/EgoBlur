@@ -50,13 +50,13 @@ jobs:
           if [ "${{ matrix.distro.package_manager }}" = "apt" ]; then
             apt-get update
             DEBIAN_FRONTEND=noninteractive apt-get install -y \
-              git curl ca-certificates build-essential ffmpeg libsm6 libxext6 xz-utils \
-              bzip2 libbz2-dev
+              git curl wget ca-certificates build-essential ffmpeg libsm6 libxext6 xz-utils \
+              bzip2 libbz2-dev unzip
             rm -rf /var/lib/apt/lists/*
           else
             dnf install -y \
-              git curl ca-certificates gcc gcc-c++ make ffmpeg mesa-libGL libSM libXext xz \
-              bzip2 bzip2-libs
+              git curl wget ca-certificates gcc gcc-c++ make ffmpeg mesa-libGL libSM libXext xz \
+              bzip2 bzip2-libs unzip
           fi
 
       - name: Install Python ${{ matrix.python-version }}
@@ -179,6 +179,110 @@ jobs:
           egoblur-gen2 -h
           egoblur-gen1 -h
 
+      - name: Download EgoBlur Gen2 models
+        shell: bash
+        env:
+          FACE_MODEL_URL: https://scontent-sea5-1.xx.fbcdn.net/m1/v/t6/An8ONis8Gp-rzgPM06SVUcz6MjMEQPau6sgr25xJrEvmEfvr_YRW0UWHKSlOtV3z0fj98V2uqqnPbnLrU0SARtcph53QmA-x3nrdYxFl-OcYe0nOc7Y0BQx4SS7tKF3zXjcPXKiQS8WEl8k7Ag.zip/ego_blur_face_gen2.zip?_nc_gid=Bnqzzs-Hw3TUw2xPOdS8vg&_nc_oc=AdnCyC1Ksl12pYZexXmg6i7tazF6p49YZh_QBOQT91JZlQp3Q7qRMMkiP6oNXcM3EDQ&sdl=1&ccb=10-5&oh=00_AfnfEq9kXuGF18-fZNfXkovu_VgiAioxjmyAMU5fLVFrNg&oe=69586C58&_nc_sid=5cb19f
+          LP_MODEL_URL: https://scontent-sea5-1.xx.fbcdn.net/m1/v/t6/An9xrh1Lyyk5EuJPXmDPC2AZQzZp3fLxlw9twrwWc9iNl8PfgzOMs0NehwSRTJN4tZ5iwPh1voT8JFpDeWCzGZnSSsXMaIzNPNjF70lWWMKHiFgOsE-ZT8aP9oTHTXGraEWc5_e3BMssDxgS.zip/ego_blur_lp_gen2.zip?_nc_gid=-efrwVRzJldEhB_POMBZtg&_nc_oc=Adn55ZpzPXSfvFpmDnVLv2yXzVw0O_8xrc82gzPBSQAjpMjyF3t2U6_cur-059H47j4&sdl=1&ccb=10-5&oh=00_AfnH9BBrj206CxDWlxtTDz3NVt3lOD56VSOMttr-qzGktw&oe=6959230A&_nc_sid=5cb19f
+        run: |
+          set -euxo pipefail
+          MODELS_DIR="${PWD}/.ci_gen2_models"
+          rm -rf "${MODELS_DIR}"
+          mkdir -p "${MODELS_DIR}"
+          wget -O "${MODELS_DIR}/ego_blur_face_gen2.zip" ${FACE_MODEL_URL}
+          wget -O "${MODELS_DIR}/ego_blur_lp_gen2.zip" ${LP_MODEL_URL}
+          unzip -o "${MODELS_DIR}/ego_blur_face_gen2.zip" -d "${MODELS_DIR}"
+          unzip -o "${MODELS_DIR}/ego_blur_lp_gen2.zip" -d "${MODELS_DIR}"
+          FACE_MODEL_PATH="$(find "${MODELS_DIR}" -maxdepth 2 -name 'ego_blur_face_gen2*.jit' -print -quit || true)"
+          LP_MODEL_PATH="$(find "${MODELS_DIR}" -maxdepth 2 -name 'ego_blur_lp_gen2*.jit' -print -quit || true)"
+          if [ -z "${FACE_MODEL_PATH}" ]; then
+            echo "::error::Unable to locate ego_blur_face_gen2 model after extraction"
+            exit 1
+          fi
+          if [ -z "${LP_MODEL_PATH}" ]; then
+            echo "::error::Unable to locate ego_blur_lp_gen2 model after extraction"
+            exit 1
+          fi
+          echo "FACE_MODEL_PATH=${FACE_MODEL_PATH}" >> "${GITHUB_ENV}"
+          echo "LP_MODEL_PATH=${LP_MODEL_PATH}" >> "${GITHUB_ENV}"
+
+      - name: Run Gen2 demo inference
+        shell: bash
+        env:
+          OUTPUT_DIR: ${{ github.workspace }}/gen2/demo_assets/output
+        run: |
+          set -euxo pipefail
+          . .venv/bin/activate
+          mkdir -p "${OUTPUT_DIR}"
+          egoblur-gen2 \
+            --face_model_path "${FACE_MODEL_PATH}" \
+            --input_image_path "${PWD}/gen2/demo_assets/test_face_image.png" \
+            --output_image_path "${OUTPUT_DIR}/test_face_image_ci.png" \
+            --scale_factor_detections 1.0
+          egoblur-gen2 \
+            --lp_model_path "${LP_MODEL_PATH}" \
+            --input_image_path "${PWD}/gen2/demo_assets/test_lp_image.png" \
+            --output_image_path "${OUTPUT_DIR}/test_lp_image_ci.png" \
+            --scale_factor_detections 1.0
+
+      - name: Upload Gen2 inference artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gen2-inference-${{ matrix.distro.name }}-py${{ matrix.python-version }}
+          if-no-files-found: error
+          path: |
+            gen2/demo_assets/output/test_face_image_ci.png
+            gen2/demo_assets/output/test_lp_image_ci.png
+
+      - name: Download EgoBlur Gen1 models
+        shell: bash
+        env:
+          FACE_MODEL_URL_GEN1: https://scontent-sea5-1.xx.fbcdn.net/m1/v/t6/An9YkFJt5-RDfoSOiDFYj4HAhU4V8n_gblPTiEmoHFpxRFNds5u7hp3PprTc-pA0J3Wd5wuqZswtWIJ8dqXGgQk0hHuDvWA9SeY7fiybc4URyZEirJIQb32tFqEl43wnMRLjsZhWMW3D1w9imw.zip/ego_blur_face_gen1.zip?_nc_gid=tm5t3x8OXvxj8CUw_6TQfg&_nc_oc=Adn7wurDKNH1YKwqA1gHt0M1pngcQzZgrTCieg3RzxQCbexHIZkszQozTfzA3t5ibCc&sdl=1&ccb=10-5&oh=00_Afk0uvH6mIWJpEQO7_YGmV8q19dDQg9DD-gygOdL8hs80w&oe=6959555B&_nc_sid=5cb19f
+          LP_MODEL_URL_GEN1: https://scontent-sea5-1.xx.fbcdn.net/m1/v/t6/An9pUFOkrNfXT1_t-HiCMftPO-8i63zVA2M_ELmoOihi0NxnomQcl_NJ8xcffcwMghaFSAarzGwW94DSWhSHAoZ0Lsh5AlAsMJ_3zWA_cGzclahF5mY9rSE2HGpiaGma6uQnvxpkKkhcKo_0.zip/ego_blur_lp_gen1.zip?_nc_gid=tm5t3x8OXvxj8CUw_6TQfg&_nc_oc=Adk-91VnCT7-DOu4N5sijd7DfwRdMtHrQMn-EYBjhCTFdQzc0R7gLC6hZQaFvj15_84&sdl=1&ccb=10-5&oh=00_Afm_IztQeIZ2_fU3pJZGUBobO1_74mjAC8MI40_U6aHwfw&oe=69596716&_nc_sid=5cb19f
+        run: |
+          set -euxo pipefail
+          MODELS_DIR="${PWD}/.ci_gen1_models"
+          rm -rf "${MODELS_DIR}"
+          mkdir -p "${MODELS_DIR}"
+          wget -O "${MODELS_DIR}/ego_blur_face_gen1.zip" "${FACE_MODEL_URL_GEN1}"
+          wget -O "${MODELS_DIR}/ego_blur_lp_gen1.zip" "${LP_MODEL_URL_GEN1}"
+          unzip -o "${MODELS_DIR}/ego_blur_face_gen1.zip" -d "${MODELS_DIR}"
+          unzip -o "${MODELS_DIR}/ego_blur_lp_gen1.zip" -d "${MODELS_DIR}"
+          FACE_MODEL_PATH_GEN1="$(find "${MODELS_DIR}" -maxdepth 2 -name 'ego_blur_face_gen1*.jit' -print -quit || true)"
+          LP_MODEL_PATH_GEN1="$(find "${MODELS_DIR}" -maxdepth 2 -name 'ego_blur_lp_gen1*.jit' -print -quit || true)"
+          if [ -z "${FACE_MODEL_PATH_GEN1}" ]; then
+            echo "::error::Unable to locate ego_blur_face_gen1 model after extraction"
+            exit 1
+          fi
+          if [ -z "${LP_MODEL_PATH_GEN1}" ]; then
+            echo "::error::Unable to locate ego_blur_lp_gen1 model after extraction"
+            exit 1
+          fi
+          echo "FACE_MODEL_PATH_GEN1=${FACE_MODEL_PATH_GEN1}" >> "${GITHUB_ENV}"
+          echo "LP_MODEL_PATH_GEN1=${LP_MODEL_PATH_GEN1}" >> "${GITHUB_ENV}"
+
+      - name: Run Gen1 demo inference
+        shell: bash
+        env:
+          OUTPUT_DIR: ${{ github.workspace }}/gen1/demo_assets/output
+        run: |
+          set -euxo pipefail
+          . .venv/bin/activate
+          mkdir -p "${OUTPUT_DIR}"
+          egoblur-gen1 \
+            --face_model_path "${FACE_MODEL_PATH_GEN1}" \
+            --input_image_path "${PWD}/gen1/demo_assets/test_image.jpg" \
+            --output_image_path "${OUTPUT_DIR}/test_face_image_ci_gen1.png" \
+            --scale_factor_detections 1.0
+
+      - name: Upload Gen1 inference artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gen1-inference-${{ matrix.distro.name }}-py${{ matrix.python-version }}
+          if-no-files-found: error
+          path: |
+            gen1/demo_assets/output/test_face_image_ci_gen1.png
+
   macos:
     name: macOS (${{ matrix.runner }} / py${{ matrix.python-version }})
     runs-on: ${{ matrix.runner }}
@@ -224,3 +328,108 @@ jobs:
           . .venv/bin/activate
           egoblur-gen2 -h
           egoblur-gen1 -h
+
+      - name: Download EgoBlur Gen2 models
+        shell: bash
+        env:
+          FACE_MODEL_URL: https://scontent-sea5-1.xx.fbcdn.net/m1/v/t6/An8ONis8Gp-rzgPM06SVUcz6MjMEQPau6sgr25xJrEvmEfvr_YRW0UWHKSlOtV3z0fj98V2uqqnPbnLrU0SARtcph53QmA-x3nrdYxFl-OcYe0nOc7Y0BQx4SS7tKF3zXjcPXKiQS8WEl8k7Ag.zip/ego_blur_face_gen2.zip?_nc_gid=Bnqzzs-Hw3TUw2xPOdS8vg&_nc_oc=AdnCyC1Ksl12pYZexXmg6i7tazF6p49YZh_QBOQT91JZlQp3Q7qRMMkiP6oNXcM3EDQ&sdl=1&ccb=10-5&oh=00_AfnfEq9kXuGF18-fZNfXkovu_VgiAioxjmyAMU5fLVFrNg&oe=69586C58&_nc_sid=5cb19f
+          LP_MODEL_URL: https://scontent-sea5-1.xx.fbcdn.net/m1/v/t6/An9xrh1Lyyk5EuJPXmDPC2AZQzZp3fLxlw9twrwWc9iNl8PfgzOMs0NehwSRTJN4tZ5iwPh1voT8JFpDeWCzGZnSSsXMaIzNPNjF70lWWMKHiFgOsE-ZT8aP9oTHTXGraEWc5_e3BMssDxgS.zip/ego_blur_lp_gen2.zip?_nc_gid=-efrwVRzJldEhB_POMBZtg&_nc_oc=Adn55ZpzPXSfvFpmDnVLv2yXzVw0O_8xrc82gzPBSQAjpMjyF3t2U6_cur-059H47j4&sdl=1&ccb=10-5&oh=00_AfnH9BBrj206CxDWlxtTDz3NVt3lOD56VSOMttr-qzGktw&oe=6959230A&_nc_sid=5cb19f
+        run: |
+          set -euxo pipefail
+          MODELS_DIR="${PWD}/.ci_gen2_models"
+          rm -rf "${MODELS_DIR}"
+          mkdir -p "${MODELS_DIR}"
+          wget -O "${MODELS_DIR}/ego_blur_face_gen2.zip" ${FACE_MODEL_URL}
+          wget -O "${MODELS_DIR}/ego_blur_lp_gen2.zip" ${LP_MODEL_URL}
+          unzip -o "${MODELS_DIR}/ego_blur_face_gen2.zip" -d "${MODELS_DIR}"
+          unzip -o "${MODELS_DIR}/ego_blur_lp_gen2.zip" -d "${MODELS_DIR}"
+          FACE_MODEL_PATH="$(find "${MODELS_DIR}" -maxdepth 2 -name 'ego_blur_face_gen2*.jit' -print -quit || true)"
+          LP_MODEL_PATH="$(find "${MODELS_DIR}" -maxdepth 2 -name 'ego_blur_lp_gen2*.jit' -print -quit || true)"
+          if [ -z "${FACE_MODEL_PATH}" ]; then
+            echo "::error::Unable to locate ego_blur_face_gen2 model after extraction"
+            exit 1
+          fi
+          if [ -z "${LP_MODEL_PATH}" ]; then
+            echo "::error::Unable to locate ego_blur_lp_gen2 model after extraction"
+            exit 1
+          fi
+          echo "FACE_MODEL_PATH=${FACE_MODEL_PATH}" >> "${GITHUB_ENV}"
+          echo "LP_MODEL_PATH=${LP_MODEL_PATH}" >> "${GITHUB_ENV}"
+
+      - name: Run Gen2 demo inference
+        shell: bash
+        env:
+          OUTPUT_DIR: ${{ github.workspace }}/gen2/demo_assets/output
+        run: |
+          set -euxo pipefail
+          . .venv/bin/activate
+          mkdir -p "${OUTPUT_DIR}"
+          egoblur-gen2 \
+            --face_model_path "${FACE_MODEL_PATH}" \
+            --input_image_path "${PWD}/gen2/demo_assets/test_face_image.png" \
+            --output_image_path "${OUTPUT_DIR}/test_face_image_ci.png" \
+            --scale_factor_detections 1.0
+          egoblur-gen2 \
+            --lp_model_path "${LP_MODEL_PATH}" \
+            --input_image_path "${PWD}/gen2/demo_assets/test_lp_image.png" \
+            --output_image_path "${OUTPUT_DIR}/test_lp_image_ci.png" \
+            --scale_factor_detections 1.0
+
+      - name: Upload Gen2 inference artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gen2-inference-${{ matrix.runner }}-py${{ matrix.python-version }}
+          if-no-files-found: error
+          path: |
+            gen2/demo_assets/output/test_face_image_ci.png
+            gen2/demo_assets/output/test_lp_image_ci.png
+
+      - name: Download EgoBlur Gen1 models
+        shell: bash
+        env:
+          FACE_MODEL_URL_GEN1: https://scontent-sea5-1.xx.fbcdn.net/m1/v/t6/An9YkFJt5-RDfoSOiDFYj4HAhU4V8n_gblPTiEmoHFpxRFNds5u7hp3PprTc-pA0J3Wd5wuqZswtWIJ8dqXGgQk0hHuDvWA9SeY7fiybc4URyZEirJIQb32tFqEl43wnMRLjsZhWMW3D1w9imw.zip/ego_blur_face_gen1.zip?_nc_gid=tm5t3x8OXvxj8CUw_6TQfg&_nc_oc=Adn7wurDKNH1YKwqA1gHt0M1pngcQzZgrTCieg3RzxQCbexHIZkszQozTfzA3t5ibCc&sdl=1&ccb=10-5&oh=00_Afk0uvH6mIWJpEQO7_YGmV8q19dDQg9DD-gygOdL8hs80w&oe=6959555B&_nc_sid=5cb19f
+          LP_MODEL_URL_GEN1: https://scontent-sea5-1.xx.fbcdn.net/m1/v/t6/An9pUFOkrNfXT1_t-HiCMftPO-8i63zVA2M_ELmoOihi0NxnomQcl_NJ8xcffcwMghaFSAarzGwW94DSWhSHAoZ0Lsh5AlAsMJ_3zWA_cGzclahF5mY9rSE2HGpiaGma6uQnvxpkKkhcKo_0.zip/ego_blur_lp_gen1.zip?_nc_gid=tm5t3x8OXvxj8CUw_6TQfg&_nc_oc=Adk-91VnCT7-DOu4N5sijd7DfwRdMtHrQMn-EYBjhCTFdQzc0R7gLC6hZQaFvj15_84&sdl=1&ccb=10-5&oh=00_Afm_IztQeIZ2_fU3pJZGUBobO1_74mjAC8MI40_U6aHwfw&oe=69596716&_nc_sid=5cb19f
+        run: |
+          set -euxo pipefail
+          MODELS_DIR="${PWD}/.ci_gen1_models"
+          rm -rf "${MODELS_DIR}"
+          mkdir -p "${MODELS_DIR}"
+          wget -O "${MODELS_DIR}/ego_blur_face_gen1.zip" "${FACE_MODEL_URL_GEN1}"
+          wget -O "${MODELS_DIR}/ego_blur_lp_gen1.zip" "${LP_MODEL_URL_GEN1}"
+          unzip -o "${MODELS_DIR}/ego_blur_face_gen1.zip" -d "${MODELS_DIR}"
+          unzip -o "${MODELS_DIR}/ego_blur_lp_gen1.zip" -d "${MODELS_DIR}"
+          FACE_MODEL_PATH_GEN1="$(find "${MODELS_DIR}" -maxdepth 2 -name 'ego_blur_face_gen1*.jit' -print -quit || true)"
+          LP_MODEL_PATH_GEN1="$(find "${MODELS_DIR}" -maxdepth 2 -name 'ego_blur_lp_gen1*.jit' -print -quit || true)"
+          if [ -z "${FACE_MODEL_PATH_GEN1}" ]; then
+            echo "::error::Unable to locate ego_blur_face_gen1 model after extraction"
+            exit 1
+          fi
+          if [ -z "${LP_MODEL_PATH_GEN1}" ]; then
+            echo "::error::Unable to locate ego_blur_lp_gen1 model after extraction"
+            exit 1
+          fi
+          echo "FACE_MODEL_PATH_GEN1=${FACE_MODEL_PATH_GEN1}" >> "${GITHUB_ENV}"
+          echo "LP_MODEL_PATH_GEN1=${LP_MODEL_PATH_GEN1}" >> "${GITHUB_ENV}"
+
+      - name: Run Gen1 demo inference
+        shell: bash
+        env:
+          OUTPUT_DIR: ${{ github.workspace }}/gen1/demo_assets/output
+        run: |
+          set -euxo pipefail
+          . .venv/bin/activate
+          mkdir -p "${OUTPUT_DIR}"
+          egoblur-gen1 \
+            --face_model_path "${FACE_MODEL_PATH_GEN1}" \
+            --lp_model_path "${LP_MODEL_PATH_GEN1}" \
+            --input_image_path "${PWD}/gen1/demo_assets/test_image.jpg" \
+            --output_image_path "${OUTPUT_DIR}/test_face_image_ci_gen1.png" \
+            --scale_factor_detections 1.0
+
+      - name: Upload Gen1 inference artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gen1-inference-${{ matrix.runner }}-py${{ matrix.python-version }}
+          if-no-files-found: error
+          path: |
+            gen1/demo_assets/output/test_face_image_ci_gen1.png
