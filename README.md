@@ -38,7 +38,7 @@ Gen1 and Gen2 python command line tool:
 - Python version: 3.10-3.12
 - Platform: Fedora 43, Ubuntu 20.04, Ubuntu 22.04, Ubuntu 24.04, MacOS-14,
   MacOS-15
-- CUDA toolkit (optional): 13.0
+- CUDA toolkit (optional): 12.8
 
 Gen1 C++ VRS Utilities:
 
