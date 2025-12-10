@@ -146,14 +146,6 @@ def parse_args():
         help="Absolute path where we want to store the visualized video",
     )
 
-    parser.add_argument(
-        "--output_video_fps",
-        required=False,
-        type=int,
-        default=30,
-        help="FPS for the output video",
-    )
-
     return parser.parse_args()
 
 
@@ -273,7 +265,6 @@ def visualize_video(
     lp_detector: Optional[EgoblurDetector],
     output_video_path: str,
     scale_factor_detections: float,
-    output_video_fps: int,
 ) -> None:
     """
     parameter input_video_path: absolute path to the input video
@@ -281,16 +272,28 @@ def visualize_video(
     parameter lp_detector: license plate detector helper (may be None)
     parameter output_video_path: absolute path where the visualized video will be saved
     parameter scale_factor_detections: scale detections by the given factor to allow blurring more area
-    parameter output_video_fps: FPS for the output video
+    FPS for the output video is preserved from the input video when available.
 
     Perform detections on the input video and save the output video at the given path.
     """
     visualized_frames: List[np.ndarray] = []
     video_reader_clip = VideoFileClip(input_video_path)
+    input_fps = getattr(video_reader_clip, "fps", None)
+
+    if not (
+        isinstance(input_fps, (int, float))
+        and math.isfinite(input_fps)
+        and input_fps > 0
+    ):
+        raise ValueError(
+            f"Input video FPS is unavailable or invalid for {input_video_path}. "
+            "Please provide a video file with a valid fixed FPS."
+        )
+    output_fps = float(input_fps)
 
     try:
         with patch_instances(fields=PATCH_INSTANCES_FIELDS):
-            frame_iterator = video_reader_clip.iter_frames()
+            frame_iterator = video_reader_clip.iter_frames(fps=output_fps)
             total_frames: Optional[int] = None
             reader = getattr(video_reader_clip, "reader", None)
             if reader is not None:
@@ -303,9 +306,8 @@ def visualize_video(
                     total_frames = int(nframes)
             if total_frames is None:
                 duration = getattr(video_reader_clip, "duration", None)
-                fps = getattr(video_reader_clip, "fps", None)
-                if isinstance(duration, (int, float)) and isinstance(fps, (int, float)):
-                    estimated_total = duration * fps
+                if isinstance(duration, (int, float)):
+                    estimated_total = duration * output_fps
                     if math.isfinite(estimated_total) and estimated_total > 0:
                         total_frames = int(estimated_total)
 
@@ -370,13 +372,13 @@ def visualize_video(
             "Please verify the input video file."
         )
 
-    clip = ImageSequenceClip(visualized_frames, fps=output_video_fps)
+    clip = ImageSequenceClip(visualized_frames, fps=output_fps)
     try:
         clip.write_videofile(
             output_video_path,
             codec="libx264",
             audio=False,
-            fps=output_video_fps,
+            fps=output_fps,
             ffmpeg_params=["-pix_fmt", "yuv420p"],
         )
         logger.info(f"Successfully output video to:{output_video_path}")
@@ -443,7 +445,6 @@ def main() -> int:
             lp_detector,
             args.output_video_path,
             args.scale_factor_detections,
-            args.output_video_fps,
         )
 
     return 0

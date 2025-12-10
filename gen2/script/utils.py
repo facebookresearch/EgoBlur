@@ -79,12 +79,6 @@ def validate_inputs(args: argparse.Namespace) -> argparse.Namespace:
         raise ValueError(
             f"Invalid scale_factor_detections {args.scale_factor_detections}"
         )
-    if not 1 <= args.output_video_fps or not (
-        isinstance(args.output_video_fps, int) and args.output_video_fps % 1 == 0
-    ):
-        raise ValueError(
-            f"Invalid output_video_fps {args.output_video_fps}, should be a positive integer"
-        )
 
     # input/output paths checks
     if args.face_model_path is None and args.lp_model_path is None:

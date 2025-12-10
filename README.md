@@ -80,9 +80,12 @@ these models as inputs to the CLI.
 
 ### CLI options
 
-The CLI arguments are identical between `egoblur-gen1` and `egoblur-gen2`,
-except that Gen2 binaries also accept the optional `--camera_name` argument for
-camera-specific defaults.
+The CLI arguments are mostly identical between `egoblur-gen1` and
+`egoblur-gen2`, with two differences:
+
+- Gen2 adds optional `--camera_name` for camera-specific defaults.
+- Gen2 preserves the input video FPS; Gen1 retains `--output_video_fps` for
+  manually setting the output FPS.
 
 A brief description of CLI args:
 
@@ -145,8 +148,13 @@ want to store the blurred video. to store the blurred video. You MUST provide
 `--output_video_path` with `--input_video_path` otherwise code will throw
 `ValueError`.
 
-`--output_video_fps` use this argument to provide the FPS for the output video.
-The values must be positive integers, if not provided this defaults to 30.
+Video FPS handling: the Gen2 script preserves the input video's FPS when writing
+the blurred output. If the input FPS metadata is missing or invalid, the script
+raises a `ValueError`; provide a video file with a valid, fixed FPS.
+
+`--output_video_fps` **(Gen1 only)** use this argument to provide the FPS for
+the output video. The values must be positive integers; if not provided this
+defaults to 30.
 
 ### CLI command examples
 
@@ -208,9 +216,12 @@ egoblur-gen2 \
   --camera_name camera-rgb \
   --lp_model_path ${EGOBLUR_MODELS}/ego_blur_lp_gen2.jit \
   --input_video_path ${EGOBLUR_REPO}/gen2/demo_assets/test_lp_video.mp4 \
-  --output_video_path ${EGOBLUR_REPO}/gen2/demo_assets/output/test_lp_video_output.mp4 \
-  --output_video_fps 20
+  --output_video_path ${EGOBLUR_REPO}/gen2/demo_assets/output/test_lp_video_output.mp4
 ```
+
+Note: Some license plates in output video frames may remain not blurred due to
+low detection confidence. This is expected, you can adjust the
+`--lp_model_score_threshold` to add low confidence detections.
 
 #### Combined face + license plate (image + video)
 
