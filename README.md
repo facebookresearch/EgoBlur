@@ -24,7 +24,7 @@ Gen2 - ✨new✨:
 - egoblur-gen2 command line tool — Python tool for PNG, JPEG, or MP4 files
 - EgoBlur VRS Utilities — C++ tool for Aria Gen2 VRS files (coming soon)
 - See
-  [EgoBlur Gen2 wiki](https://facebookresearch.github.io/projectaria_tools/gen2/research-tools/open_models/egoblur)
+  [EgoBlur Gen2 wiki](https://facebookresearch.github.io/projectaria_tools/gen2/research-tools/models/egoblur)
   for Gen2 models' details.
 
 <img src="./assets/gen2_result.jpeg" alt="EgoBlur Gen2 Demo" style="width: 50%;">
