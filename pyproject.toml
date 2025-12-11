@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "egoblur"
-version = "2.0.0a2"
+version = "2.0.0"
 description = "Demo utilities for running EgoBlur person and license plate blurring models."
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
