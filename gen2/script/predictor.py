@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 from copy import deepcopy
 from dataclasses import dataclass, field
 from enum import Enum
@@ -113,6 +114,9 @@ class EgoblurDetector:
         self._class = LABEL_TO_ID[category_str]
 
         self._model = self._load_torchscript_model()
+
+        # Timing tracking for inference speed reporting
+        self.last_inference_time: float = 0.0
 
         if resize_aug is not None:
             assert "min_size_test" in resize_aug, "min_size_test must be in resize_aug"
@@ -489,7 +493,13 @@ class EgoblurDetector:
             )
 
         img_batch, orig_img_hw_list, model_input_hw_list = self.pre_process(batched)
+
+        # Time the inference call
+        inference_start = time.time()
         preds = self.inference(img_batch)
+        inference_end = time.time()
+        self.last_inference_time = inference_end - inference_start
+
         detections_batch = self.get_detections(
             output_tensor=preds,
             timestamp_s=0.0,

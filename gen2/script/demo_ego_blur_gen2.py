@@ -17,6 +17,7 @@
 
 import argparse
 import math
+import time
 from typing import Dict, List, Optional
 
 import cv2
@@ -228,10 +229,14 @@ def visualize_image(
     image_tensor = get_image_tensor(bgr_image)
     detections = []
 
+    # Speed tracking variables
+    total_inference_time: float = 0.0
+
     with patch_instances(fields=PATCH_INSTANCES_FIELDS):
         # get face detections
         if face_detector is not None:
             face_results = face_detector.run(image_tensor)
+            total_inference_time += face_detector.last_inference_time
             if face_results:
                 if len(face_results) != 1:
                     raise ValueError(
@@ -243,6 +248,7 @@ def visualize_image(
         # get license plate detections
         if lp_detector is not None:
             lp_results = lp_detector.run(image_tensor)
+            total_inference_time += lp_detector.last_inference_time
             if lp_results:
                 if len(lp_results) != 1:
                     raise ValueError(
@@ -251,11 +257,24 @@ def visualize_image(
                     )
                 detections.extend(lp_results[0])
 
+    blur_start_time = time.time()
     image = visualize(
         image,
         detections,
         scale_factor_detections,
     )
+    blur_end_time = time.time()
+    blur_time = blur_end_time - blur_start_time
+
+    # Print speed report
+    logger.info("=" * 60)
+    logger.info("SPEED REPORT (Image)")
+    logger.info("=" * 60)
+    logger.info(f"Inference time: {total_inference_time:.4f} seconds")
+    logger.info(f"Blurring time:  {blur_time:.4f} seconds")
+    logger.info(f"Total time:     {total_inference_time + blur_time:.4f} seconds")
+    logger.info("=" * 60)
+
     write_image(image, output_image_path)
 
 
@@ -291,6 +310,12 @@ def visualize_video(
         )
     output_fps = float(input_fps)
 
+    # Speed tracking variables
+    total_inference_time: float = 0.0
+    total_blur_time: float = 0.0
+    total_frame_time: float = 0.0
+    frame_count: int = 0
+
     try:
         with patch_instances(fields=PATCH_INSTANCES_FIELDS):
             frame_iterator = video_reader_clip.iter_frames(fps=output_fps)
@@ -322,6 +347,8 @@ def visualize_video(
 
             try:
                 for frame in progress_iterator:
+                    frame_start_time = time.time()
+
                     if frame.ndim == 2:
                         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 
@@ -329,8 +356,11 @@ def visualize_video(
                     image_tensor = get_image_tensor(bgr_image)
                     detections: List[List[float]] = []
 
+                    frame_inference_time: float = 0.0
+
                     if face_detector is not None:
                         face_results = face_detector.run(image_tensor)
+                        frame_inference_time += face_detector.last_inference_time
                         if face_results:
                             if len(face_results) != 1:
                                 raise ValueError(
@@ -340,6 +370,7 @@ def visualize_video(
                             detections.extend(face_results[0])
                     if lp_detector is not None:
                         lp_results = lp_detector.run(image_tensor)
+                        frame_inference_time += lp_detector.last_inference_time
                         if lp_results:
                             if len(lp_results) != 1:
                                 raise ValueError(
@@ -348,11 +379,17 @@ def visualize_video(
                                 )
                             detections.extend(lp_results[0])
 
+                    total_inference_time += frame_inference_time
+
+                    blur_start_time = time.time()
                     visualized_bgr = visualize(
                         bgr_image.copy(),
                         detections,
                         scale_factor_detections,
                     )
+                    blur_end_time = time.time()
+                    total_blur_time += blur_end_time - blur_start_time
+
                     if visualized_bgr.dtype != np.uint8:
                         visualized_bgr = np.clip(visualized_bgr, 0, 255).astype(
                             np.uint8
@@ -360,6 +397,10 @@ def visualize_video(
 
                     visualized_rgb = cv2.cvtColor(visualized_bgr, cv2.COLOR_BGR2RGB)
                     visualized_frames.append(np.ascontiguousarray(visualized_rgb))
+
+                    frame_end_time = time.time()
+                    total_frame_time += frame_end_time - frame_start_time
+                    frame_count += 1
             finally:
                 if tqdm is not None and hasattr(progress_iterator, "close"):
                     progress_iterator.close()
@@ -371,6 +412,25 @@ def visualize_video(
             f"No frames were processed from {input_video_path}. "
             "Please verify the input video file."
         )
+
+    # Print speed report
+    if frame_count > 0:
+        avg_inference_spf = total_inference_time / frame_count
+        avg_blur_spf = total_blur_time / frame_count
+        avg_total_spf = total_frame_time / frame_count
+
+        logger.info("=" * 60)
+        logger.info("SPEED REPORT")
+        logger.info("=" * 60)
+        logger.info(f"Total frames processed: {frame_count}")
+        logger.info(f"Inference speed: {avg_inference_spf:.4f} seconds/frame")
+        logger.info(f"Blurring speed:  {avg_blur_spf:.4f} seconds/frame")
+        logger.info(f"Total speed:     {avg_total_spf:.4f} seconds/frame")
+        logger.info("-" * 60)
+        logger.info(f"Total inference time: {total_inference_time:.2f} seconds")
+        logger.info(f"Total blur time:      {total_blur_time:.2f} seconds")
+        logger.info(f"Total processing time: {total_frame_time:.2f} seconds")
+        logger.info("=" * 60)
 
     clip = ImageSequenceClip(visualized_frames, fps=output_fps)
     try:
