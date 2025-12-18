@@ -22,7 +22,7 @@ Gen1:
 Gen2 - ✨new✨:
 
 - egoblur-gen2 command line tool — Python tool for PNG, JPEG, or MP4 files
-- EgoBlur VRS Utilities — C++ tool for Aria Gen2 VRS files (coming soon)
+- EgoBlur VRS Utilities — Users currently need to convert VRS files into video or image files to use the model. Please refer to the [VRS to MP4 Converter](https://facebookresearch.github.io/projectaria_tools/gen2/research-tools/projectariatools/tools/vrstomp4) for instructions on converting VRS to MP4. A future version of EgoBlur will support operating directly on VRS files.
 - See
   [EgoBlur Gen2 wiki](https://facebookresearch.github.io/projectaria_tools/gen2/research-tools/models/egoblur)
   for Gen2 models' details.
