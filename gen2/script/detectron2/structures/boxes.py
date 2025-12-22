@@ -18,7 +18,6 @@ from typing import List, Tuple, Union
 
 import numpy as np
 import torch
-from torch import device
 
 _RawBoxType = Union[List[float], Tuple[float, ...], torch.Tensor, np.ndarray]
 
@@ -321,7 +320,7 @@ class Boxes:
         return cat_boxes
 
     @property
-    def device(self) -> device:
+    def device(self) -> torch.device:
         return self.tensor.device
 
     # type "Iterator[torch.Tensor]", yield, and iter() not supported by torchscript
