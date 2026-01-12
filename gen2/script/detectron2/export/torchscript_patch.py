@@ -22,7 +22,6 @@ from unittest import mock
 
 # need some explicit imports due to https://github.com/pytorch/pytorch/issues/38964
 import torch
-
 from gen2.script.detectron2.structures import Boxes, Instances
 from gen2.script.detectron2.utils.env import _import_file
 
@@ -75,11 +74,12 @@ def patch_instances(fields):
     See more in `scripting_with_instances`.
     """
 
-    with tempfile.TemporaryDirectory(
-        prefix="detectron2"
-    ) as dir, tempfile.NamedTemporaryFile(
-        mode="w", encoding="utf-8", suffix=".py", dir=dir, delete=False
-    ) as f:
+    with (
+        tempfile.TemporaryDirectory(prefix="detectron2") as dir,
+        tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", suffix=".py", dir=dir, delete=False
+        ) as f,
+    ):
         try:
             # Objects that use Instances should not reuse previously-compiled
             # results in cache, because `Instances` could be a new class each time.

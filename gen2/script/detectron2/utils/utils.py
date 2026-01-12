@@ -18,7 +18,6 @@ from typing import List, Tuple, Union
 import numpy as np
 import torch
 import torch.nn.functional as F
-
 from gen2.script.detectron2.structures import Instances
 from PIL import Image
 
@@ -28,9 +27,9 @@ def convert_scripted_instances(instances):
     Convert a scripted Instances object to a regular Instances object.
     """
 
-    assert hasattr(
-        instances, "image_size"
-    ), f"Expect an Instances object, but got {type(instances)}!"
+    assert hasattr(instances, "image_size"), (
+        f"Expect an Instances object, but got {type(instances)}!"
+    )
     ret = Instances(instances.image_size)
     for name in instances._field_names:
         val = getattr(instances, "_" + name, None)

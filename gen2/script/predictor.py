@@ -22,7 +22,6 @@ import cv2
 import numpy as np
 import torch
 import torchvision
-
 from gen2.script.constants import (
     MAX_MODEL_SCORE_THRESHOLD_GEN2,
     MIN_MODEL_SCORE_THRESHOLD_GEN2,

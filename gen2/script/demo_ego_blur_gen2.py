@@ -41,7 +41,6 @@ from gen2.script.utils import (
 )
 from moviepy.editor import ImageSequenceClip
 from moviepy.video.io.VideoFileClip import VideoFileClip
-
 from tqdm.auto import tqdm
 
 
