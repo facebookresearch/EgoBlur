@@ -1,0 +1,5 @@
+torch==1.12.1
+torchvision==0.13.1
+numpy==1.24.3
+opencv-python-headless==4.7.0.72
+moviepy==1.0.3
