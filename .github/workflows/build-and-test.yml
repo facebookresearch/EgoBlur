@@ -168,7 +168,7 @@ jobs:
 
       - name: Install EgoBlur from source
         env:
-          PIP_EXTRA_INDEX_URL: ${{ env.PYTORCH_INDEX_URL }}
+          PIP_EXTRA_INDEX_URL: "${{ env.PYTORCH_INDEX_URL }} https://test.pypi.org/simple/"
         run: |
           . .venv/bin/activate
           pip install --no-cache-dir .
@@ -178,19 +178,20 @@ jobs:
           . .venv/bin/activate
           egoblur-gen2 -h
           egoblur-gen1 -h
+          egoblur-vrs-blur -h
 
       - name: Download EgoBlur Gen2 models
         shell: bash
         env:
-          FACE_MODEL_URL: https://scontent-sjc3-1.xx.fbcdn.net/m1/v/t6/An8ONis8Gp-rzgPM06SVUcz6MjMEQPau6sgr25xJrEvmEfvr_YRW0UWHKSlOtV3z0fj98V2uqqnPbnLrU0SARtcph53QmA-x3nrdYxFl-OcYe0nOc7Y0BQx4SS7tKF3zXjcPXKiQS8WEl8k7Ag.zip/ego_blur_face_gen2.zip?_nc_gid=AoF1MDmqVWtgbELJSqBfpw&_nc_oc=Adkqz8xMJ5l0gJ2oAamKnb9NqmizuzKALJZJMkpfe9Ker8KHfeXDZFWKwVJg1ERR3I0uugs5Ia7AMdlNj00okAxr&sdl=1&ccb=10-5&oh=00_Afw5f7atj-s6ulfYIuRok2c4yQPbYMFNMFFlZGSczPelRg&oe=69DFC658&_nc_sid=5cb19f
-          LP_MODEL_URL: https://scontent-sjc3-1.xx.fbcdn.net/m1/v/t6/An9xrh1Lyyk5EuJPXmDPC2AZQzZp3fLxlw9twrwWc9iNl8PfgzOMs0NehwSRTJN4tZ5iwPh1voT8JFpDeWCzGZnSSsXMaIzNPNjF70lWWMKHiFgOsE-ZT8aP9oTHTXGraEWc5_e3BMssDxgS.zip/ego_blur_lp_gen2.zip?_nc_gid=AoF1MDmqVWtgbELJSqBfpw&_nc_oc=Adl4nlfy5oQVSwecC_QlOds3d9veTrAFPi97P990-DehJv8N4fTzfmpyeHtFWLLqNKg6Mks5XSCwDd4Iwv3e3VFR&sdl=1&ccb=10-6&oh=00_AfwIUNAciBBTQ_Kk5KcJ-q6pH11kLMeTuJyKOzdhHtvJxg&oe=69DFD44A&_nc_sid=5cb19f
+          FACE_MODEL_URL: https://www.projectaria.com/async/sample/download/?bucket=core&filename=ego_blur_face_gen2.zip
+          LP_MODEL_URL: https://www.projectaria.com/async/sample/download/?bucket=core&filename=ego_blur_lp_gen2.zip
         run: |
           set -euxo pipefail
           MODELS_DIR="${PWD}/.ci_gen2_models"
           rm -rf "${MODELS_DIR}"
           mkdir -p "${MODELS_DIR}"
-          wget -O "${MODELS_DIR}/ego_blur_face_gen2.zip" ${FACE_MODEL_URL}
-          wget -O "${MODELS_DIR}/ego_blur_lp_gen2.zip" ${LP_MODEL_URL}
+          curl -L -o "${MODELS_DIR}/ego_blur_face_gen2.zip" "${FACE_MODEL_URL}"
+          curl -L -o "${MODELS_DIR}/ego_blur_lp_gen2.zip" "${LP_MODEL_URL}"
           unzip -o "${MODELS_DIR}/ego_blur_face_gen2.zip" -d "${MODELS_DIR}"
           unzip -o "${MODELS_DIR}/ego_blur_lp_gen2.zip" -d "${MODELS_DIR}"
           FACE_MODEL_PATH="$(find "${MODELS_DIR}" -maxdepth 2 -name 'ego_blur_face_gen2*.jit' -print -quit || true)"
@@ -234,18 +235,40 @@ jobs:
             gen2/demo_assets/output/test_face_image_ci.png
             gen2/demo_assets/output/test_lp_image_ci.png
 
+      - name: Run VRS blur (debug encoding only with inference skipped)
+        shell: bash
+        run: |
+          set -euxo pipefail
+          . .venv/bin/activate
+          egoblur-vrs-blur \
+            --input_vrs_path "${PWD}/gen2/demo_assets/multi_stream.vrs" \
+            --output_vrs_path /tmp/blurred_debug_test.vrs \
+            --debug_encoding_only
+
+      - name: Run VRS blur (face + LP inference)
+        shell: bash
+        run: |
+          set -euxo pipefail
+          . .venv/bin/activate
+          egoblur-vrs-blur \
+            --input_vrs_path "${PWD}/gen2/demo_assets/multi_stream.vrs" \
+            --output_vrs_path /tmp/blurred_inference_test.vrs \
+            --face_model_path "${FACE_MODEL_PATH}" \
+            --lp_model_path "${LP_MODEL_PATH}" \
+            --batch_size 5
+
       - name: Download EgoBlur Gen1 models
         shell: bash
         env:
-          FACE_MODEL_URL_GEN1: https://scontent-sjc3-1.xx.fbcdn.net/m1/v/t6/An9YkFJt5-RDfoSOiDFYj4HAhU4V8n_gblPTiEmoHFpxRFNds5u7hp3PprTc-pA0J3Wd5wuqZswtWIJ8dqXGgQk0hHuDvWA9SeY7fiybc4URyZEirJIQb32tFqEl43wnMRLjsZhWMW3D1w9imw.zip/ego_blur_face_gen1.zip?_nc_gid=AoF1MDmqVWtgbELJSqBfpw&_nc_oc=AdnBJ7_Yj0fqGTzJ3eA1ySL9m0Kk29uvOjFafJNMQZ2ybs8TLFFJFhYR061LZTSsVhboxwG0ZWQI_3MirU0TSymx&sdl=1&ccb=10-6&oh=00_AfyH1WgiJJts57AqjSYj3B3yR9BMdBSHVkTsQDDjMTsnEw&oe=69DFCE5B&_nc_sid=5cb19f
-          LP_MODEL_URL_GEN1: https://scontent-sjc3-1.xx.fbcdn.net/m1/v/t6/An9pUFOkrNfXT1_t-HiCMftPO-8i63zVA2M_ELmoOihi0NxnomQcl_NJ8xcffcwMghaFSAarzGwW94DSWhSHAoZ0Lsh5AlAsMJ_3zWA_cGzclahF5mY9rSE2HGpiaGma6uQnvxpkKkhcKo_0.zip/ego_blur_lp_gen1.zip?_nc_gid=AoF1MDmqVWtgbELJSqBfpw&_nc_oc=AdnTns5S4EwPXeFdzeNi62rLWFFJefgphIjsFlXDkQDhoewPN3aVfLQcV6xusC7qLNIXoZ1XnXEna3VLM3Z6JoQn&sdl=1&ccb=10-5&oh=00_Afy_FTvooD38PTid-Ku3HXx8QFXCj-vIxN3f0AtpsfKjgg&oe=69DFA7D6&_nc_sid=5cb19f
+          FACE_MODEL_URL_GEN1: https://www.projectaria.com/async/sample/download/?bucket=core&filename=ego_blur_face_gen1.zip
+          LP_MODEL_URL_GEN1: https://www.projectaria.com/async/sample/download/?bucket=core&filename=ego_blur_lp_gen1.zip
         run: |
           set -euxo pipefail
           MODELS_DIR="${PWD}/.ci_gen1_models"
           rm -rf "${MODELS_DIR}"
           mkdir -p "${MODELS_DIR}"
-          wget -O "${MODELS_DIR}/ego_blur_face_gen1.zip" "${FACE_MODEL_URL_GEN1}"
-          wget -O "${MODELS_DIR}/ego_blur_lp_gen1.zip" "${LP_MODEL_URL_GEN1}"
+          curl -L -o "${MODELS_DIR}/ego_blur_face_gen1.zip" "${FACE_MODEL_URL_GEN1}"
+          curl -L -o "${MODELS_DIR}/ego_blur_lp_gen1.zip" "${LP_MODEL_URL_GEN1}"
           unzip -o "${MODELS_DIR}/ego_blur_face_gen1.zip" -d "${MODELS_DIR}"
           unzip -o "${MODELS_DIR}/ego_blur_lp_gen1.zip" -d "${MODELS_DIR}"
           FACE_MODEL_PATH_GEN1="$(find "${MODELS_DIR}" -maxdepth 2 -name 'ego_blur_face_gen1*.jit' -print -quit || true)"
@@ -319,6 +342,8 @@ jobs:
           python -m pip install --upgrade pip
 
       - name: Install EgoBlur from source
+        env:
+          PIP_EXTRA_INDEX_URL: "https://test.pypi.org/simple/"
         run: |
           . .venv/bin/activate
           pip install --no-cache-dir .
@@ -328,19 +353,20 @@ jobs:
           . .venv/bin/activate
           egoblur-gen2 -h
           egoblur-gen1 -h
+          egoblur-vrs-blur -h
 
       - name: Download EgoBlur Gen2 models
         shell: bash
         env:
-          FACE_MODEL_URL: https://scontent-sjc3-1.xx.fbcdn.net/m1/v/t6/An8ONis8Gp-rzgPM06SVUcz6MjMEQPau6sgr25xJrEvmEfvr_YRW0UWHKSlOtV3z0fj98V2uqqnPbnLrU0SARtcph53QmA-x3nrdYxFl-OcYe0nOc7Y0BQx4SS7tKF3zXjcPXKiQS8WEl8k7Ag.zip/ego_blur_face_gen2.zip?_nc_gid=AoF1MDmqVWtgbELJSqBfpw&_nc_oc=Adkqz8xMJ5l0gJ2oAamKnb9NqmizuzKALJZJMkpfe9Ker8KHfeXDZFWKwVJg1ERR3I0uugs5Ia7AMdlNj00okAxr&sdl=1&ccb=10-5&oh=00_Afw5f7atj-s6ulfYIuRok2c4yQPbYMFNMFFlZGSczPelRg&oe=69DFC658&_nc_sid=5cb19f
-          LP_MODEL_URL: https://scontent-sjc3-1.xx.fbcdn.net/m1/v/t6/An9xrh1Lyyk5EuJPXmDPC2AZQzZp3fLxlw9twrwWc9iNl8PfgzOMs0NehwSRTJN4tZ5iwPh1voT8JFpDeWCzGZnSSsXMaIzNPNjF70lWWMKHiFgOsE-ZT8aP9oTHTXGraEWc5_e3BMssDxgS.zip/ego_blur_lp_gen2.zip?_nc_gid=AoF1MDmqVWtgbELJSqBfpw&_nc_oc=Adl4nlfy5oQVSwecC_QlOds3d9veTrAFPi97P990-DehJv8N4fTzfmpyeHtFWLLqNKg6Mks5XSCwDd4Iwv3e3VFR&sdl=1&ccb=10-6&oh=00_AfwIUNAciBBTQ_Kk5KcJ-q6pH11kLMeTuJyKOzdhHtvJxg&oe=69DFD44A&_nc_sid=5cb19f
+          FACE_MODEL_URL: https://www.projectaria.com/async/sample/download/?bucket=core&filename=ego_blur_face_gen2.zip
+          LP_MODEL_URL: https://www.projectaria.com/async/sample/download/?bucket=core&filename=ego_blur_lp_gen2.zip
         run: |
           set -euxo pipefail
           MODELS_DIR="${PWD}/.ci_gen2_models"
           rm -rf "${MODELS_DIR}"
           mkdir -p "${MODELS_DIR}"
-          wget -O "${MODELS_DIR}/ego_blur_face_gen2.zip" ${FACE_MODEL_URL}
-          wget -O "${MODELS_DIR}/ego_blur_lp_gen2.zip" ${LP_MODEL_URL}
+          curl -L -o "${MODELS_DIR}/ego_blur_face_gen2.zip" "${FACE_MODEL_URL}"
+          curl -L -o "${MODELS_DIR}/ego_blur_lp_gen2.zip" "${LP_MODEL_URL}"
           unzip -o "${MODELS_DIR}/ego_blur_face_gen2.zip" -d "${MODELS_DIR}"
           unzip -o "${MODELS_DIR}/ego_blur_lp_gen2.zip" -d "${MODELS_DIR}"
           FACE_MODEL_PATH="$(find "${MODELS_DIR}" -maxdepth 2 -name 'ego_blur_face_gen2*.jit' -print -quit || true)"
@@ -384,18 +410,28 @@ jobs:
             gen2/demo_assets/output/test_face_image_ci.png
             gen2/demo_assets/output/test_lp_image_ci.png
 
+      - name: Run VRS blur (debug encoding only with inference skipped - inference on github Mac too slow)
+        shell: bash
+        run: |
+          set -euxo pipefail
+          . .venv/bin/activate
+          egoblur-vrs-blur \
+            --input_vrs_path "${PWD}/gen2/demo_assets/multi_stream.vrs" \
+            --output_vrs_path /tmp/blurred_debug_test.vrs \
+            --debug_encoding_only
+
       - name: Download EgoBlur Gen1 models
         shell: bash
         env:
-          FACE_MODEL_URL_GEN1: https://scontent-sjc3-1.xx.fbcdn.net/m1/v/t6/An9YkFJt5-RDfoSOiDFYj4HAhU4V8n_gblPTiEmoHFpxRFNds5u7hp3PprTc-pA0J3Wd5wuqZswtWIJ8dqXGgQk0hHuDvWA9SeY7fiybc4URyZEirJIQb32tFqEl43wnMRLjsZhWMW3D1w9imw.zip/ego_blur_face_gen1.zip?_nc_gid=AoF1MDmqVWtgbELJSqBfpw&_nc_oc=AdnBJ7_Yj0fqGTzJ3eA1ySL9m0Kk29uvOjFafJNMQZ2ybs8TLFFJFhYR061LZTSsVhboxwG0ZWQI_3MirU0TSymx&sdl=1&ccb=10-6&oh=00_AfyH1WgiJJts57AqjSYj3B3yR9BMdBSHVkTsQDDjMTsnEw&oe=69DFCE5B&_nc_sid=5cb19f
-          LP_MODEL_URL_GEN1: https://scontent-sjc3-1.xx.fbcdn.net/m1/v/t6/An9pUFOkrNfXT1_t-HiCMftPO-8i63zVA2M_ELmoOihi0NxnomQcl_NJ8xcffcwMghaFSAarzGwW94DSWhSHAoZ0Lsh5AlAsMJ_3zWA_cGzclahF5mY9rSE2HGpiaGma6uQnvxpkKkhcKo_0.zip/ego_blur_lp_gen1.zip?_nc_gid=AoF1MDmqVWtgbELJSqBfpw&_nc_oc=AdnTns5S4EwPXeFdzeNi62rLWFFJefgphIjsFlXDkQDhoewPN3aVfLQcV6xusC7qLNIXoZ1XnXEna3VLM3Z6JoQn&sdl=1&ccb=10-5&oh=00_Afy_FTvooD38PTid-Ku3HXx8QFXCj-vIxN3f0AtpsfKjgg&oe=69DFA7D6&_nc_sid=5cb19f
+          FACE_MODEL_URL_GEN1: https://www.projectaria.com/async/sample/download/?bucket=core&filename=ego_blur_face_gen1.zip
+          LP_MODEL_URL_GEN1: https://www.projectaria.com/async/sample/download/?bucket=core&filename=ego_blur_lp_gen1.zip
         run: |
           set -euxo pipefail
           MODELS_DIR="${PWD}/.ci_gen1_models"
           rm -rf "${MODELS_DIR}"
           mkdir -p "${MODELS_DIR}"
-          wget -O "${MODELS_DIR}/ego_blur_face_gen1.zip" "${FACE_MODEL_URL_GEN1}"
-          wget -O "${MODELS_DIR}/ego_blur_lp_gen1.zip" "${LP_MODEL_URL_GEN1}"
+          curl -L -o "${MODELS_DIR}/ego_blur_face_gen1.zip" "${FACE_MODEL_URL_GEN1}"
+          curl -L -o "${MODELS_DIR}/ego_blur_lp_gen1.zip" "${LP_MODEL_URL_GEN1}"
           unzip -o "${MODELS_DIR}/ego_blur_face_gen1.zip" -d "${MODELS_DIR}"
           unzip -o "${MODELS_DIR}/ego_blur_lp_gen1.zip" -d "${MODELS_DIR}"
           FACE_MODEL_PATH_GEN1="$(find "${MODELS_DIR}" -maxdepth 2 -name 'ego_blur_face_gen1*.jit' -print -quit || true)"
