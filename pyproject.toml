@@ -28,6 +28,8 @@ dependencies = [
   "tqdm>=4.64,<5",
   "torch==2.9.1",
   "torchvision==0.24.1",
+  "av>=12.0,<14",
+  "vrs==1.2.2a1",
 ]
 
 [project.urls]
@@ -38,6 +40,7 @@ Source = "https://github.com/facebookresearch/egoblur"
 [project.entry-points."console_scripts"]
 egoblur-gen1 = "gen1.script.demo_ego_blur_gen1:main"
 egoblur-gen2 = "gen2.script.demo_ego_blur_gen2:main"
+egoblur-vrs-blur = "gen2.script.vrs_blur_gen2:main"
 
 [tool.setuptools]
 include-package-data = true

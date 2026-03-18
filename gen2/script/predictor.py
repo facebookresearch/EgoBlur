@@ -362,6 +362,7 @@ class EgoblurDetector:
         detections_batch: List[Optional[FrameDetections]] = []
         for boxes, scores in zip(batch_boxes, batch_scores):
             if not boxes.any():
+                detections_batch.append(None)
                 continue
 
             detections = FrameDetections(
