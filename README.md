@@ -10,6 +10,11 @@ detecting and blurring faces and license plates in images and videos. We provide
 Gen1 models for data captured with Aria Gen1 devices and Gen2 models for data
 captured with Aria Gen2 devices.
 
+**Important:** Use the model generation that matches your data. If your data was
+captured with an Aria Gen1 device, use the Gen1 models and the `egoblur-gen1`
+CLI. If your data was captured with an Aria Gen2 device, use the Gen2 models and
+the `egoblur-gen2` CLI.
+
 Gen1:
 
 - egoblur-gen1 command line tool — Python tool for PNG, JPEG, or MP4 files
