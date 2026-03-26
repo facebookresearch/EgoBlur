@@ -16,7 +16,7 @@ import argparse
 import logging
 import os
 from functools import lru_cache
-from typing import List
+from typing import Dict, List, Optional
 
 import cv2
 import numpy as np
@@ -199,3 +199,60 @@ def scale_box(
     y2 = min(yc + h / 2, max_height)
 
     return [x1, y1, x2, y2]
+
+
+def _get_threshold(
+    camera_name: Optional[str],
+    user_threshold: Optional[float],
+    threshold_map: Optional[Dict[str, float]],
+) -> float:
+    """
+    Resolve the effective score threshold using user input or camera defaults.
+    """
+    if user_threshold is not None:
+        return user_threshold
+    if threshold_map is not None:
+        if camera_name is not None:
+            return threshold_map.get(camera_name, threshold_map["camera-rgb"])
+        else:
+            return threshold_map["camera-rgb"]
+    raise ValueError(
+        "Cannot retrieve the model score threshold. Please provide a user-specified threshold or a mapping from camera name to threshold."
+    )
+
+
+def visualize(
+    image: np.ndarray,
+    detections: List[List[float]],
+    scale_factor_detections: float,
+) -> np.ndarray:
+    """
+    parameter image: image on which we want to make detections
+    parameter detections: list of bounding boxes in format [x1, y1, x2, y2]
+    parameter scale_factor_detections: scale detections by the given factor to allow blurring more area, 1.15 would mean 15% scaling
+
+    Visualize the input image with the detections and save the output image at the given path
+    """
+    image_fg = image.copy()
+    mask_shape = (image.shape[0], image.shape[1], 1)
+    mask = np.full(mask_shape, 0, dtype=np.uint8)
+
+    for box in detections:
+        if scale_factor_detections != 1.0:
+            box = scale_box(
+                box, image.shape[1], image.shape[0], scale_factor_detections
+            )
+        x1, y1, x2, y2 = int(box[0]), int(box[1]), int(box[2]), int(box[3])
+        w = x2 - x1
+        h = y2 - y1
+
+        ksize = (image.shape[0] // 2, image.shape[1] // 2)
+        image_fg[y1:y2, x1:x2] = cv2.blur(image_fg[y1:y2, x1:x2], ksize)
+        cv2.ellipse(mask, (((x1 + x2) // 2, (y1 + y2) // 2), (w, h), 0), 255, -1)
+
+    inverse_mask = cv2.bitwise_not(mask)
+    image_bg = cv2.bitwise_and(image, image, mask=inverse_mask)
+    image_fg = cv2.bitwise_and(image_fg, image_fg, mask=mask)
+    image = cv2.add(image_bg, image_fg)
+
+    return image

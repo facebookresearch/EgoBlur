@@ -20,6 +20,12 @@ Re-export the primary ``main`` entry point implemented in
 scripts and other callers.
 """
 
-from .script.demo_ego_blur_gen2 import main
+
+def main(*args, **kwargs):
+    """Lazy wrapper that defers the moviepy-heavy import until actually called."""
+    from .script.demo_ego_blur_gen2 import main as _main
+
+    return _main(*args, **kwargs)
+
 
 __all__ = ["main"]
