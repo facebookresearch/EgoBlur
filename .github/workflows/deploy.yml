@@ -17,7 +17,7 @@ jobs:
   build-sdist:
     if: github.repository == 'facebookresearch/egoblur'
     runs-on: ubuntu-latest
-    name: Build source distribution
+    name: Build sdist and wheel
     steps:
       - uses: actions/checkout@v4
 
@@ -26,26 +26,27 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Build sdist
+      - name: Build sdist and wheel
         run: |
           python -m pip install --upgrade pip build
-          python -m build --sdist
+          python -m build
 
-      - name: Verify install from sdist
+      - name: Verify install from wheel
         env:
           PIP_EXTRA_INDEX_URL: "https://download.pytorch.org/whl/cpu https://test.pypi.org/simple/"
         run: |
           python -m venv .venv-verify
           . .venv-verify/bin/activate
           pip install --upgrade pip
-          pip install dist/*.tar.gz
+          pip install dist/*.whl
+          egoblur-gen1 -h
           egoblur-gen2 -h
           egoblur-vrs-blur -h
 
       - uses: actions/upload-artifact@v4
         with:
           name: python-package-distributions
-          path: dist/*.tar.gz
+          path: dist/
 
   publish:
     runs-on: ubuntu-latest
