@@ -28,7 +28,6 @@ import sys
 from types import ModuleType
 
 from gen2.script import detectron2 as _vendored_detectron2
-from gen2.script.demo_ego_blur_gen2 import main
 from gen2.script.detectron2 import (
     export as _vendored_export,
     structures as _vendored_structures,
@@ -41,6 +40,13 @@ from gen2.script.detectron2.structures import (
 from gen2.script.predictor import ClassID, EgoblurDetector
 
 __all__ = ["ClassID", "EgoblurDetector", "main"]
+
+
+def main(*args, **kwargs):
+    """Lazy wrapper that defers the moviepy-heavy import until actually called."""
+    from gen2.script.demo_ego_blur_gen2 import main as _main
+
+    return _main(*args, **kwargs)
 
 
 def _alias_vendored_detectron2() -> None:
