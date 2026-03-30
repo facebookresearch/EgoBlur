@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import cv2
 import numpy as np
 import torch
+import torch.nn.functional as TF
 import torchvision
 from gen2.script.constants import (
     MAX_MODEL_SCORE_THRESHOLD_GEN2,
@@ -33,6 +34,45 @@ from gen2.script.detectron2.utils import (
     ResizeShortestEdge,
 )
 from torch.jit import RecursiveScriptModule
+
+
+class GPUResizeShortestEdge:
+    """GPU-based resize matching ``ResizeShortestEdge`` output-size logic.
+
+    Unlike ``ResizeShortestEdge`` which operates per-image on NumPy arrays via
+    PIL, this class resizes a **batched GPU tensor** in-place using
+    ``F.interpolate``, avoiding the GPU-CPU-GPU round-trip entirely.
+    """
+
+    def __init__(self, short_edge_length: int, max_size: int) -> None:
+        self.short_edge_length = short_edge_length
+        self.max_size = max_size
+
+    def get_output_shape(self, h: int, w: int) -> Tuple[int, int]:
+        scale = self.short_edge_length / min(h, w)
+        new_h, new_w = h * scale, w * scale
+        if max(new_h, new_w) > self.max_size:
+            scale = self.max_size / max(new_h, new_w)
+            new_h *= scale
+            new_w *= scale
+        return int(new_h + 0.5), int(new_w + 0.5)
+
+    def resize_batch(self, images: torch.Tensor) -> torch.Tensor:
+        """Resize a ``B x C x H x W`` uint8 GPU tensor.
+
+        Returns a uint8 tensor of shape ``B x C x new_H x new_W``.
+        """
+        _, _, h, w = images.shape
+        new_h, new_w = self.get_output_shape(h, w)
+        if (new_h, new_w) == (h, w):
+            return images
+        return TF.interpolate(
+            images.float(),
+            size=(new_h, new_w),
+            mode="bilinear",
+            align_corners=False,
+            antialias=True,
+        ).to(torch.uint8)
 
 
 class ClassID(int, Enum):
@@ -79,6 +119,7 @@ class EgoblurDetector:
         tscript_type: str = "script",
         image_format: str = "BGR",
         resize_aug: Optional[Dict[str, Any]] = None,
+        use_gpu_resize: bool = True,
     ) -> None:
         """
         Args:
@@ -92,6 +133,8 @@ class EgoblurDetector:
             resize_aug: Optional dictionary with keys ``min_size_test`` and ``max_size_test`` to
                 configure a ``ResizeShortestEdge`` augmentation. If omitted, no resize augmentation
                 is applied.
+            use_gpu_resize: When True (default), resize images on GPU via F.interpolate
+                instead of CPU-based PIL resize. Much faster for GPU-based inference.
         """
         self.detection_class = detection_class
         self.device_str = self._validate_model_device(device)
@@ -120,13 +163,19 @@ class EgoblurDetector:
         if resize_aug is not None:
             assert "min_size_test" in resize_aug, "min_size_test must be in resize_aug"
             assert "max_size_test" in resize_aug, "max_size_test must be in resize_aug"
-            self.aug = ResizeShortestEdge(
-                short_edge_length=[
-                    resize_aug["min_size_test"],
-                    resize_aug["min_size_test"],
-                ],
-                max_size=resize_aug["max_size_test"],
-            )
+            if use_gpu_resize:
+                self.aug = GPUResizeShortestEdge(
+                    short_edge_length=resize_aug["min_size_test"],
+                    max_size=resize_aug["max_size_test"],
+                )
+            else:
+                self.aug = ResizeShortestEdge(
+                    short_edge_length=[
+                        resize_aug["min_size_test"],
+                        resize_aug["min_size_test"],
+                    ],
+                    max_size=resize_aug["max_size_test"],
+                )
         else:
             self.aug = None
 
@@ -267,10 +316,19 @@ class EgoblurDetector:
                 * ``List[Tuple[int, int]]`` – original ``(H, W)`` per image.
                 * ``List[Tuple[int, int]]`` – model-input ``(H, W)`` after augmentation.
         """
+        b, _, h, w = bgr_image_batch.shape
+        orig_img_hw_list = [(h, w)] * b
+
+        # GPU resize: stay on device the whole time.
+        if isinstance(self.aug, GPUResizeShortestEdge):
+            resized = self.aug.resize_batch(bgr_image_batch)
+            _, _, rh, rw = resized.shape
+            return resized, orig_img_hw_list, [(rh, rw)] * b
+
+        # CPU resize (or no resize): round-trip through numpy.
         img_batch: List[np.ndarray] = [
             im.transpose(1, 2, 0)[:, :, ::-1] for im in bgr_image_batch.cpu().numpy()
         ]
-        orig_img_hw_list = [img.shape[:2] for img in img_batch]
 
         if self.aug is not None:
             img_batch = [
@@ -362,6 +420,7 @@ class EgoblurDetector:
         detections_batch: List[Optional[FrameDetections]] = []
         for boxes, scores in zip(batch_boxes, batch_scores):
             if not boxes.any():
+                detections_batch.append(None)
                 continue
 
             detections = FrameDetections(
