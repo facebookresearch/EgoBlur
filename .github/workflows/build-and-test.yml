@@ -168,7 +168,7 @@ jobs:
 
       - name: Install EgoBlur from source
         env:
-          PIP_EXTRA_INDEX_URL: ${{ env.PYTORCH_INDEX_URL }}
+          PIP_EXTRA_INDEX_URL: "${{ env.PYTORCH_INDEX_URL }} https://test.pypi.org/simple/"
         run: |
           . .venv/bin/activate
           pip install --no-cache-dir .
@@ -178,6 +178,7 @@ jobs:
           . .venv/bin/activate
           egoblur-gen2 -h
           egoblur-gen1 -h
+          egoblur-vrs-blur -h
 
       - name: Download EgoBlur Gen2 models
         shell: bash
@@ -233,6 +234,28 @@ jobs:
           path: |
             gen2/demo_assets/output/test_face_image_ci.png
             gen2/demo_assets/output/test_lp_image_ci.png
+
+      - name: Run VRS blur (debug encoding only with inference skipped)
+        shell: bash
+        run: |
+          set -euxo pipefail
+          . .venv/bin/activate
+          egoblur-vrs-blur \
+            --input_vrs_path "${PWD}/gen2/demo_assets/multi_stream.vrs" \
+            --output_vrs_path /tmp/blurred_debug_test.vrs \
+            --debug_encoding_only
+
+      - name: Run VRS blur (face + LP inference)
+        shell: bash
+        run: |
+          set -euxo pipefail
+          . .venv/bin/activate
+          egoblur-vrs-blur \
+            --input_vrs_path "${PWD}/gen2/demo_assets/multi_stream.vrs" \
+            --output_vrs_path /tmp/blurred_inference_test.vrs \
+            --face_model_path "${FACE_MODEL_PATH}" \
+            --lp_model_path "${LP_MODEL_PATH}" \
+            --batch_size 5
 
       - name: Download EgoBlur Gen1 models
         shell: bash
@@ -319,6 +342,8 @@ jobs:
           python -m pip install --upgrade pip
 
       - name: Install EgoBlur from source
+        env:
+          PIP_EXTRA_INDEX_URL: "https://test.pypi.org/simple/"
         run: |
           . .venv/bin/activate
           pip install --no-cache-dir .
@@ -328,6 +353,7 @@ jobs:
           . .venv/bin/activate
           egoblur-gen2 -h
           egoblur-gen1 -h
+          egoblur-vrs-blur -h
 
       - name: Download EgoBlur Gen2 models
         shell: bash
@@ -383,6 +409,16 @@ jobs:
           path: |
             gen2/demo_assets/output/test_face_image_ci.png
             gen2/demo_assets/output/test_lp_image_ci.png
+
+      - name: Run VRS blur (debug encoding only with inference skipped - inference on github Mac too slow)
+        shell: bash
+        run: |
+          set -euxo pipefail
+          . .venv/bin/activate
+          egoblur-vrs-blur \
+            --input_vrs_path "${PWD}/gen2/demo_assets/multi_stream.vrs" \
+            --output_vrs_path /tmp/blurred_debug_test.vrs \
+            --debug_encoding_only
 
       - name: Download EgoBlur Gen1 models
         shell: bash
