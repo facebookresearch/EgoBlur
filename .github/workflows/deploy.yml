@@ -64,7 +64,7 @@ jobs:
 
       - name: Publish to Test PyPI
         if: github.event.inputs.deploy == 'test'
-        uses: pypa/gh-action-pypi-publish@v1.4.2
+        uses: pypa/gh-action-pypi-publish@v1.13.0
         with:
           user: __token__
           password: ${{ secrets.TEST_PYPI_TOKEN }}
@@ -74,7 +74,7 @@ jobs:
 
       - name: Publish to PyPI
         if: github.event.inputs.deploy == 'prod' && startsWith(github.ref, 'refs/tags')
-        uses: pypa/gh-action-pypi-publish@v1.4.2
+        uses: pypa/gh-action-pypi-publish@v1.13.0
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
