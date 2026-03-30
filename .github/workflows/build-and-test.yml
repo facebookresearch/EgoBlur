@@ -180,6 +180,20 @@ jobs:
           egoblur-gen1 -h
           egoblur-vrs-blur -h
 
+      - name: Build wheel
+        run: |
+          . .venv/bin/activate
+          pip install build
+          python -m build --wheel
+          ls -la dist/
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.distro.name }}-py${{ matrix.python-version }}
+          if-no-files-found: error
+          path: dist/*.whl
+
       - name: Download EgoBlur Gen2 models
         shell: bash
         env:
@@ -354,6 +368,20 @@ jobs:
           egoblur-gen2 -h
           egoblur-gen1 -h
           egoblur-vrs-blur -h
+
+      - name: Build wheel
+        run: |
+          . .venv/bin/activate
+          pip install build
+          python -m build --wheel
+          ls -la dist/
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.runner }}-py${{ matrix.python-version }}
+          if-no-files-found: error
+          path: dist/*.whl
 
       - name: Download EgoBlur Gen2 models
         shell: bash
