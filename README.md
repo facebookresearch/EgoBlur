@@ -24,10 +24,14 @@ Gen1:
   [EgoBlur Gen1 wiki](https://facebookresearch.github.io/projectaria_tools/docs/open_models/egoblur)
   for Gen1 models' details.
 
-Gen2 - ✨new✨:
+Gen2:
 
 - egoblur-gen2 command line tool — Python tool for PNG, JPEG, or MP4 files
-- EgoBlur VRS Utilities — Users currently need to convert VRS files into video or image files to use the model. Please refer to the [VRS to MP4 Converter](https://facebookresearch.github.io/projectaria_tools/gen2/research-tools/projectariatools/tools/vrstomp4) for instructions on converting VRS to MP4. A future version of EgoBlur will support operating directly on VRS files.
+- egoblur-vrs-blur command line tool — End-to-end VRS blur tool that reads
+  camera streams from a VRS file, runs face and/or license-plate detection,
+  applies blur, and writes everything back into a single output VRS file.
+  Non-camera streams (IMU, VIO, barometer, eye tracking, etc.) are copied
+  verbatim. New in version 2.0.1.
 - See
   [EgoBlur Gen2 wiki](https://facebookresearch.github.io/projectaria_tools/gen2/research-tools/models/egoblur)
   for Gen2 models' details.
@@ -254,6 +258,29 @@ egoblur-gen1 \
   --input_video_path ${EGOBLUR_REPO}/gen1/demo_assets/test_video.mp4 \
   --output_video_path ${EGOBLUR_REPO}/gen1/demo_assets/test_video_output.mp4
 ```
+
+### End-to-end VRS blur (Gen2)
+
+Starting with version 2.0.1, `egoblur-vrs-blur` can blur faces and license
+plates directly in Aria Gen2 VRS files without converting to MP4 first. It
+reads camera streams, runs detection, applies blur, and writes everything back
+into a single output VRS file. Non-camera streams (IMU, VIO, barometer, eye
+tracking, etc.) are copied verbatim.
+
+> **Note:** We do not recommend running this tool on macOS. The EgoBlur models
+> run on CPU only on Mac (no CUDA support), which results in very slow
+> inference. For best performance, use a Linux machine with a CUDA-capable GPU.
+
+```
+egoblur-vrs-blur \
+  --input_vrs_path /path/to/input.vrs \
+  --output_vrs_path /path/to/output.vrs \
+  --face_model_path ${EGOBLUR_MODELS}/ego_blur_face_gen2.jit \
+  --lp_model_path ${EGOBLUR_MODELS}/ego_blur_lp_gen2.jit \
+  --batch_size 5
+```
+
+Run `egoblur-vrs-blur --help` for the full list of options.
 
 ## License
 

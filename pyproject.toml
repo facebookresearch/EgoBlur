@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "egoblur"
-version = "2.0.1rc1"
+version = "2.0.1"
 description = "Demo utilities for running EgoBlur person and license plate blurring models."
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
@@ -29,7 +29,7 @@ dependencies = [
   "torch==2.9.1",
   "torchvision==0.24.1",
   "av>=12.0,<14",
-  "vrs==1.2.2rc1",
+  "vrs==1.2.2",
 ]
 
 [project.urls]
