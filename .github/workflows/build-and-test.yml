@@ -168,7 +168,7 @@ jobs:
 
       - name: Install EgoBlur from source
         env:
-          PIP_EXTRA_INDEX_URL: "${{ env.PYTORCH_INDEX_URL }} https://test.pypi.org/simple/"
+          PIP_EXTRA_INDEX_URL: "${{ env.PYTORCH_INDEX_URL }}"
         run: |
           . .venv/bin/activate
           pip install --no-cache-dir .
@@ -356,8 +356,6 @@ jobs:
           python -m pip install --upgrade pip
 
       - name: Install EgoBlur from source
-        env:
-          PIP_EXTRA_INDEX_URL: "https://test.pypi.org/simple/"
         run: |
           . .venv/bin/activate
           pip install --no-cache-dir .

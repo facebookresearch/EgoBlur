@@ -36,7 +36,7 @@ jobs:
 
       - name: Verify install from wheel
         env:
-          PIP_EXTRA_INDEX_URL: "https://download.pytorch.org/whl/cpu https://test.pypi.org/simple/"
+          PIP_EXTRA_INDEX_URL: "https://download.pytorch.org/whl/cpu"
         run: |
           python -m venv .venv-verify
           . .venv-verify/bin/activate
