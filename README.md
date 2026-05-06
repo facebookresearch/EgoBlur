@@ -32,9 +32,7 @@ Gen2:
   applies blur, and writes everything back into a single output VRS file.
   Non-camera streams (IMU, VIO, barometer, eye tracking, etc.) are copied
   verbatim. New in version 2.0.1.
-- See
-  [EgoBlur Gen2 wiki](https://facebookresearch.github.io/projectaria_tools/gen2/research-tools/models/egoblur)
-  for Gen2 models' details.
+- See gen 1 paper for model details: [EgoBlur: Responsible Innovation in Aria](https://arxiv.org/abs/2308.13093)
 
 <img src="./assets/gen2_result.jpeg" alt="EgoBlur Gen2 Demo" style="width: 50%;">
 
