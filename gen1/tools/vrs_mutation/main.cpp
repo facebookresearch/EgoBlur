@@ -18,7 +18,6 @@
 #include <memory>
 #include <string>
 
-#include <fmt/core.h>
 #include <vrs/utils/FilterCopy.h> // @manual
 #include <vrs/utils/RecordFileInfo.h> // @manual
 
